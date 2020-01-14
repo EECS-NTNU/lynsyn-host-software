@@ -27,4 +27,4 @@ cp /mingw64/bin/nm bin/
 cp jtagdevices bin/jtagdevices
 cp ../zadig-2.4.exe bin/
 cp COPYING bin/COPYING.txt
-cp -r fwbin_precompiled bin/fwbin
+cp -r fwbin bin/
