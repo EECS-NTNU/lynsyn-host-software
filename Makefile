@@ -26,9 +26,6 @@ export HOSTDIR = $(shell pwd)
 ifeq ($(OS),Windows_NT)
 export CFLAGS = -I$(HOSTDIR)/../argp-standalone-1.3/ -I/mingw64/include/libusb-1.0/
 export LDFLAGS = -largp -L$(HOSTDIR)/../argp-standalone-1.3/
-HOST_EXECUTABLES=bin/lynsyn_tester bin/lynsyn_sampler bin/lynsyn_xsvf bin/lynsyn_viewer
-else
-HOST_EXECUTABLES=bin/lynsyn_tester bin/lynsyn_sampler bin/lynsyn_xvc bin/lynsyn_xsvf bin/lynsyn_viewer
 endif
 
 export CFLAGS += -g -O2 -Wall -I/usr/include/libusb-1.0/ -I$(HOSTDIR)/common/ -I$(HOSTDIR)/liblynsyn/ 
@@ -44,7 +41,7 @@ export RANLIB = ranlib
 ###############################################################################
 
 .PHONY: host_software
-host_software: $(HOST_EXECUTABLES)
+host_software: bin/lynsyn_tester bin/lynsyn_sampler bin/lynsyn_xvc bin/lynsyn_xsvf bin/lynsyn_viewer
 	@echo
 	@echo "Host software compilation successful"
 	@echo
@@ -62,8 +59,10 @@ bin/lynsyn_sampler:
 
 .PHONY: bin/lynsyn_xvc
 bin/lynsyn_xvc:
-	cd lynsyn_xvc && $(MAKE)
-	cp lynsyn_xvc/lynsyn_xvc bin
+	mkdir -p lynsyn_xvc/build
+	cd lynsyn_xvc/build && $(QMAKE) ..
+	cd lynsyn_xvc/build && $(MAKE)
+	cp lynsyn_xvc/build/lynsyn_xvc bin
 
 .PHONY: bin/lynsyn_xsvf
 bin/lynsyn_xsvf:
@@ -105,6 +104,6 @@ clean:
 	cd lynsyn_tester && $(MAKE) clean
 	cd lynsyn_sampler && $(MAKE) clean
 	cd libxsvf && $(MAKE) clean
-	cd lynsyn_xvc && $(MAKE) clean
+	rm -rf lynsyn_xvc/build
 	rm -rf lynsyn_viewer/build
 	rm -rf liblynsyn/*.o bin fwbin
