@@ -358,14 +358,14 @@ void programTest(void) {
     fflush(stdout);
     getchar();
 
-    printf("*** Enter fpga mcs filename [fwbin/lynsyn.mcs]:\n");
+    printf("*** Enter fpga mcs filename [fwbin/original/lynsyn_2.0.mcs]:\n");
     fflush(stdout);
     char filename[80];
     if(!fgets(filename, 80, stdin)) {
       printf("I/O error\n");
       exit(-1);
     }
-    if(filename[0] == '\n') strncpy(filename, "fwbin/lynsyn.mcs", 80);
+    if(filename[0] == '\n') strncpy(filename, "fwbin/original/lynsyn_2.0.mcs", 80);
     filename[strcspn(filename, "\n")] = 0;
 
     if(!programFpga(filename)) exit(-1);
@@ -384,7 +384,18 @@ void programTest(void) {
 
   getchar();
 
-  printf("*** Enter boot bin filename [fwbin/lynsyn_boot.bin]:\n");
+  char *bootbin;
+  char *mainbin;
+
+  if(hwVersion >= HW_VERSION_3_0) {
+    bootbin = "fwbin/lite/lynsyn_boot_2.0.bin";
+    mainbin = "fwbin/lite/lynsyn_main_2.0.bin";
+  } else {
+    bootbin = "fwbin/original/lynsyn_boot_2.0.bin";
+    mainbin = "fwbin/original/lynsyn_main_2.0.bin";
+  }
+
+  printf("*** Enter boot bin filename [%s]:\n", bootbin);
   fflush(stdout);
   char bootFilename[80];
   if(!fgets(bootFilename, 80, stdin)) {
@@ -392,10 +403,10 @@ void programTest(void) {
     fflush(stdout);
     exit(-1);
   }
-  if(bootFilename[0] == '\n') strncpy(bootFilename, "fwbin/lynsyn_boot.bin", 80);
+  if(bootFilename[0] == '\n') strncpy(bootFilename, bootbin, 80);
   bootFilename[strcspn(bootFilename, "\n")] = 0;
 
-  printf("*** Enter main bin filename [fwbin/lynsyn_boot.bin]:\n");
+  printf("*** Enter main bin filename [%s]:\n", mainbin);
   fflush(stdout);
   char mainFilename[80];
   if(!fgets(mainFilename, 80, stdin)) {
@@ -403,7 +414,7 @@ void programTest(void) {
     fflush(stdout);
     exit(-1);
   }
-  if(mainFilename[0] == '\n') strncpy(mainFilename, "fwbin/lynsyn_main.bin", 80);
+  if(mainFilename[0] == '\n') strncpy(mainFilename, mainbin, 80);
   mainFilename[strcspn(mainFilename, "\n")] = 0;
 
   if(!programMcu(bootFilename, mainFilename)) {
