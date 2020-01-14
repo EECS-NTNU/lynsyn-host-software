@@ -53,6 +53,7 @@ int XvcServer::handleData() {
 #ifdef VERBOSE
       printf("%u : Received command: 'getinfo'\n", (int)time(NULL));
       printf("\t Replied with %s\n", xvcInfo);
+      fflush(stdout);
 #endif
       return 0;
     } else if (memcmp(cmd, "se", 2) == 0) {
@@ -76,6 +77,7 @@ int XvcServer::handleData() {
 #ifdef VERBOSE
       printf("%u : Received command: 'settck'\n", (int)time(NULL));
       printf("\t Replied with %d\n\n", newPeriod);
+      fflush(stdout);
 #endif
       return 0;
     } else if (memcmp(cmd, "sh", 2) == 0) {
@@ -84,26 +86,31 @@ int XvcServer::handleData() {
       }
 #ifdef VERBOSE
       printf("%u : Received command: 'shift'\n", (int)time(NULL));
+      fflush(stdout);
 #endif
     } else {
       fprintf(stderr, "invalid cmd '%s'\n", cmd);
+      fflush(stderr);
       return 1;
     }
 
     int len;
     if (sread(tcpSocket, &len, 4) != 1) {
       fprintf(stderr, "reading length failed\n");
+      fflush(stderr);
       return 1;
     }
 
     int nr_bytes = (len + 7) / 8;
     if (nr_bytes * 2 > (int)sizeof(buffer)) {
       fprintf(stderr, "buffer size exceeded\n");
+      fflush(stderr);
       return 1;
     }
 
     if (sread(tcpSocket, buffer, nr_bytes * 2) != 1) {
       fprintf(stderr, "reading data failed\n");
+      fflush(stderr);
       return 1;
     }
     memset(result, 0, nr_bytes);
@@ -112,6 +119,7 @@ int XvcServer::handleData() {
     printf("\tNumber of Bits  : %d\n", len);
     printf("\tNumber of Bytes : %d \n", nr_bytes);
     printf("\n");
+    fflush(stdout);
 #endif
 
     lynsyn_shift(len, &buffer[0], &buffer[nr_bytes], result);
@@ -128,11 +136,13 @@ void XvcServer::run() {
   tcpServer = new QTcpServer();
 
   if (!tcpServer->listen(QHostAddress::Any, XVC_PORT)) {
-    printf("Unable to start the server\n");
+    fprintf(stderr, "Unable to start the server\n");
+    fflush(stderr);
     exit(1);
   }
 
   printf("INFO: To connect to this lynsyn_xvc instance, use url: TCP:%s:%u\n\n", QHostInfo::localHostName().toUtf8().constData(), XVC_PORT);
+  fflush(stdout);
 
   connect(tcpServer, &QTcpServer::newConnection, this, &XvcServer::newConnection);
 }
@@ -144,9 +154,11 @@ void XvcServer::newConnection() {
   connect(tcpSocket, SIGNAL(disconnected()), tcpSocket, SLOT(deleteLater()));
 
   printf("Connection accepted\n");
+  fflush(stdout);
 
   if(!lynsyn_init()) {
     fprintf(stderr, "Failed to init lynsyn\n");
+    fflush(stderr);
     exit(-1);
   }
 
@@ -157,6 +169,7 @@ void XvcServer::newConnection() {
 
 void XvcServer::disconnected() {
   printf("Disconnected\n");
+  fflush(stdout);
   lynsyn_release();
 }
 

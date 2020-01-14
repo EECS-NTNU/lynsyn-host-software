@@ -62,7 +62,11 @@ bin/lynsyn_xvc:
 	mkdir -p lynsyn_xvc/build
 	cd lynsyn_xvc/build && $(QMAKE) ..
 	cd lynsyn_xvc/build && $(MAKE)
+ifeq ($(OS),Windows_NT)
+	cp lynsyn_xvc/build/release/lynsyn_xvc bin
+else
 	cp lynsyn_xvc/build/lynsyn_xvc bin
+endif
 
 .PHONY: bin/lynsyn_xsvf
 bin/lynsyn_xsvf:
