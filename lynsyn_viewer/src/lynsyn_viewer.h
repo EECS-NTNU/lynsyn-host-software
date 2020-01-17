@@ -27,9 +27,9 @@
 #include <QComboBox>
 
 #define APP_NAME   "Lynsyn Viewer"
-#define ORG_NAME   "NIPOLECS"
+#define ORG_NAME   "lynsyn"
 #define ORG_DOMAIN "ntnu.no"
-#define VERSION    1.0
+#define VERSION    1.1
 
 ///////////////////////////////////////////////////////////////////////////////
 // layout defines
