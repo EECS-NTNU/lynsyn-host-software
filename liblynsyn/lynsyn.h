@@ -221,6 +221,8 @@ unsigned lynsyn_numCores(void);
 /** @return Number of power sensors on the connected lynsyn board */
 unsigned lynsyn_numSensors(void);
 
+char *lynsyn_getVersionString(uint8_t version);
+
 /*****************************************************************************/
 /* Internal, do not use */
 

@@ -827,3 +827,15 @@ unsigned lynsyn_numSensors(void) {
     return 7;
   }
 }
+
+char *lynsyn_getVersionString(uint8_t version) {
+  static char versionString[4];
+
+  if(version == 1) return "1.0";
+  versionString[0] = (version >> 4) + '0';
+  versionString[1] = '.';
+  versionString[2] = (version & 0xf) + '0';
+  versionString[3] = 0;
+
+  return versionString;
+}

@@ -24,8 +24,8 @@
 
 #include <stdint.h>
 
-#define SW_VERSION        SW_VERSION_2_0
-#define SW_VERSION_STRING "V2.0"
+#define SW_VERSION        SW_VERSION_2_1
+#define SW_VERSION_STRING "V2.1"
 
 #define HW_VERSION_2_0 0x20
 #define HW_VERSION_2_1 0x21
@@ -44,6 +44,7 @@
 #define SW_VERSION_1_5 0x15
 #define SW_VERSION_1_6 0x16
 #define SW_VERSION_2_0 0x20
+#define SW_VERSION_2_1 0x21
 
 ///////////////////////////////////////////////////////////////////////////////
 

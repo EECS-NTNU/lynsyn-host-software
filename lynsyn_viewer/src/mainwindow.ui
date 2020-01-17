@@ -48,6 +48,8 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionLynsyn_HW_information"/>
+    <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
    <addaction name="menuFile"/>
@@ -89,12 +91,17 @@
   </action>
   <action name="actionImport_CSV">
    <property name="text">
-    <string>Import CSV</string>
+    <string>&amp;Import CSV</string>
    </property>
   </action>
   <action name="actionExport_CSV">
    <property name="text">
-    <string>Export CSV</string>
+    <string>Export &amp;CSV</string>
+   </property>
+  </action>
+  <action name="actionLynsyn_HW_information">
+   <property name="text">
+    <string>Lynsyn HW information</string>
    </property>
   </action>
  </widget>
@@ -196,6 +203,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionLynsyn_HW_information</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showHwInfo()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>about()</slot>
@@ -203,5 +226,6 @@
   <slot>upgrade()</slot>
   <slot>importCsv()</slot>
   <slot>exportCsv()</slot>
+  <slot>showHwInfo()</slot>
  </slots>
 </ui>

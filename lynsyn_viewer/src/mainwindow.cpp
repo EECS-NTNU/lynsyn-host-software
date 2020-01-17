@@ -29,6 +29,7 @@
 #include "profiledialog.h"
 #include "importdialog.h"
 #include "ui_importdialog.h"
+#include "lynsyn.h"
 
 void MainWindow::updateComboboxes() {
   sensorBox->clear();
@@ -134,6 +135,44 @@ void MainWindow::about() {
                      "A performance measurement and analysis utility\n"
                      "Copyright 2020 NTNU\n"
                      "License: GPL Version 3");
+}
+
+void MainWindow::showHwInfo() {
+  if(!lynsyn_init()) {
+    QMessageBox msgBox;
+    msgBox.setText("Can't init Lynsyn.  Make sure a Lynsyn board is connected");
+    msgBox.exec();
+    return;
+  }
+
+  uint8_t hwVersion, bootVersion, swVersion;
+  double r[LYNSYN_MAX_SENSORS];
+
+  lynsyn_getInfo(&hwVersion, &bootVersion, &swVersion, r);
+
+  QMessageBox msgBox;
+
+  QString messageText;
+  QTextStream messageTextStream(&messageText);
+
+  messageTextStream << "<h4>Lynsyn HW information</h4>";
+
+  messageTextStream << "HW version: " << lynsyn_getVersionString(hwVersion) << "<br>";
+  messageTextStream << "Bootloader version: " << lynsyn_getVersionString(bootVersion) << "<br>";
+  messageTextStream << "Firmware version: " << lynsyn_getVersionString(swVersion);
+
+  messageTextStream << "<h5>Sensors</h5>";
+  for(unsigned i = 0; i < lynsyn_numSensors(); i++) {
+    messageTextStream << QString::number(i+1) << ": ";
+    messageTextStream << "Current range: 0-" << QString::number(lynsyn_getMaxCurrent(r[i])) << "A ";
+    if(hwVersion >= HW_VERSION_3_0) messageTextStream << "Voltage range: 0-" << QString::number(lynsyn_getMaxVoltage()) << "V";
+    messageTextStream << "<br>";
+  }
+  msgBox.setText(messageText);
+
+  lynsyn_release();
+
+  msgBox.exec();
 }
 
 void MainWindow::importCsv() {

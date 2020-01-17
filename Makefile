@@ -110,4 +110,4 @@ clean:
 	cd libxsvf && $(MAKE) clean
 	rm -rf lynsyn_xvc/build
 	rm -rf lynsyn_viewer/build
-	rm -rf liblynsyn/*.o bin fwbin
+	rm -rf liblynsyn/*.o bin

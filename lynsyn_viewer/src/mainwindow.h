@@ -57,6 +57,7 @@ public:
 
 private slots:
   void about();
+  void showHwInfo();
   void importCsv();
   void exportCsv();
   void upgrade();
