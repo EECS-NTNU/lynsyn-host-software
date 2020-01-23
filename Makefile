@@ -89,7 +89,7 @@ endif
 .PHONY: install
 install: host_software install_hw
 	cp bin/* /usr/bin/
-	cp .jtagdevices /etc/jtagdevices
+	cp jtagdevices /etc/jtagdevices
 	@echo
 	@echo "Software and hardware installed"
 	@echo
