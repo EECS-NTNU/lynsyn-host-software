@@ -214,7 +214,7 @@ void calibrateSensorCurrent(int sensor, double acceptance) {
       printf("*** Connect a calibration current source.\n"
              "The current should be around %fA.\n"
              "Do not trust the current source display, use a multimeter to confirm.\n"
-             "Enter measured current:\n", currents[point]);
+             "Enter measured current: ", currents[point]);
       fflush(stdout);
       if(!fgets(calCurrent, 80, stdin)) {
         printf("I/O error\n");
@@ -272,7 +272,7 @@ void calibrateSensorVoltage(int sensor, double acceptance) {
       printf("*** Connect a calibration voltage source.\n"
              "The voltage should be around %fV.\n"
              "Do not trust the voltage source display, use a multimeter to confirm.\n"
-             "Enter measured voltage:\n", voltages[point]);
+             "Enter measured voltage: ", voltages[point]);
       fflush(stdout);
       if(!fgets(calVoltage, 80, stdin)) {
         printf("I/O error\n");
@@ -424,6 +424,14 @@ void programTest(void) {
     fflush(stdout);
     exit(-1);
   }
+
+  printf("\n*** Unplug the EFM32 starter kit from Lynsyn\n");
+  fflush(stdout);
+  getchar();
+
+  printf("*** Reboot Lynsyn by removing and replugging the USB cable.\n");
+  fflush(stdout);
+  getchar();
 
   printf("\nThird step: Automatic tests.\n\n");
   fflush(stdout);
