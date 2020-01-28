@@ -158,6 +158,8 @@ bool lynsyn_getNextSample(struct LynsynSample *sample);
  */
 bool lynsyn_getSample(struct LynsynSample *sample, bool average, uint64_t cores);
 
+bool lynsyn_getAvgSample(struct LynsynSample *sample, double duration, uint64_t cores);
+
 /*****************************************************************************/
 /* HW setup and calibration */
 
@@ -178,16 +180,10 @@ bool lynsyn_firmwareUpgrade(int size, uint8_t *buf);
 bool lynsyn_cleanNonVolatile(uint8_t hwVersion, double *r);
 
 /** Calibrate current sensor */
-void lynsyn_adcCalibrateCurrent(uint8_t sensor, double current, double maxCurrent);
+bool lynsyn_adcCalibrateCurrent(uint8_t sensor, double current, double maxCurrent);
 
 /** Calibrate voltage sensor */
-void lynsyn_adcCalibrateVoltage(uint8_t sensor, double current, double maxCurrent);
-
-/** Set calibration value */
-bool lynsyn_calSet(uint8_t sensor, double offset, double gain);
-
-/** Get calibration value */
-bool lynsyn_calGet(struct CalInfoPacket *calInfo);
+bool lynsyn_adcCalibrateVoltage(uint8_t sensor, double current, double maxCurrent);
 
 /*****************************************************************************/
 /* Tests */

@@ -63,6 +63,7 @@ double getVoltage(int16_t voltage, int sensor);
 void convertSample(struct LynsynSample *dest, struct SampleReplyPacket *source);
 uint8_t getCurrentChannel(uint8_t sensor);
 uint8_t getVoltageChannel(uint8_t sensor);
+static bool lynsyn_getNext(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -88,6 +89,14 @@ struct LynsynJtagDevice *devices;
 
 static bool useMarkBp;
 static bool inited = false;
+
+static unsigned pointNumCurrent[LYNSYN_MAX_SENSORS];
+static double lastWantedCurrent[LYNSYN_MAX_SENSORS];
+static double lastActualCurrent[LYNSYN_MAX_SENSORS];
+
+static unsigned pointNumVoltage[LYNSYN_MAX_SENSORS];
+static double lastWantedVoltage[LYNSYN_MAX_SENSORS];
+static double lastActualVoltage[LYNSYN_MAX_SENSORS];
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -180,7 +189,8 @@ bool lynsyn_postinit(void) {
 
   useMarkBp = false;
 
-  if(initReply.swVersion != SW_VERSION_2_0) {
+  if((initReply.swVersion != SW_VERSION_2_0) &&
+     (initReply.swVersion != SW_VERSION_2_1)){
     printf("Unsupported Lynsyn SW Version: %x\n", initReply.swVersion);
     return false;
   }
@@ -192,20 +202,34 @@ bool lynsyn_postinit(void) {
 
 bool lynsyn_init(void) {
   if(!lynsyn_preinit()) {
-    fflush(stderr);
+    fflush(stdout);
     return false;
   }
   if(!lynsyn_postinit()) {
-    fflush(stderr);
+    lynsyn_prerelease();
+    fflush(stdout);
     return false;
   }
 
   sampleBuf = (struct SampleReplyPacket*)malloc(MAX_SAMPLES * sizeof(struct SampleReplyPacket));
-  if(!sampleBuf) return false;
+  if(!sampleBuf) {
+    lynsyn_prerelease();
+    return false;
+  }
 
   devices = (struct LynsynJtagDevice*)malloc(sizeof(struct LynsynJtagDevice));
+  if(!devices) {
+    free(sampleBuf);
+    lynsyn_prerelease();
+    return false;
+  }
 
-  fflush(stderr);
+  for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+    pointNumCurrent[i] = 0;
+    pointNumVoltage[i] = 0;
+  }
+
+  fflush(stdout);
 
   return true;
 }
@@ -337,50 +361,104 @@ void lynsyn_setLed(bool on) {
   return;
 }
 
-void lynsyn_adcCalibrateCurrent(uint8_t sensor, double current, double maxCurrent) {
-  struct CalibrateRequestPacket req;
-  req.request.cmd = USB_CMD_CAL;
-  req.channel = getCurrentChannel(sensor);
-  req.calVal = (current / maxCurrent) * 0xffd0;
-  sendBytes((uint8_t*)&req, sizeof(struct CalibrateRequestPacket));
-}
+bool lynsyn_adcCalibrateCurrent(uint8_t sensor, double current, double maxCurrent) {
+  if(swVer >= SW_VERSION_2_1) {
+    double wanted = (current / maxCurrent) * LYNSYN_MAX_SENSOR_VALUE;
+    double actual = 0;
 
-void lynsyn_adcCalibrateVoltage(uint8_t sensor, double voltage, double maxVoltage) {
-  struct CalibrateRequestPacket req;
-  req.request.cmd = USB_CMD_CAL;
-  req.channel = getVoltageChannel(sensor);
-  req.calVal = (voltage / maxVoltage) * 0xffd0;
-  sendBytes((uint8_t*)&req, sizeof(struct CalibrateRequestPacket));
-}
+    {
+      unsigned n = 0;
+      lynsyn_startPeriodSampling(1, 0);
+      while(lynsyn_getNext()) {
+        struct SampleReplyPacket *source = (struct SampleReplyPacket*)buf;
+        actual += source->channel[getCurrentChannel(sensor)];
+        n++;
+      }
+      actual /= n;
+    }
 
-bool lynsyn_calSetCurrent(uint8_t sensor, double offset, double gain) {
-  struct CalSetRequestPacket req;
-  req.request.cmd = USB_CMD_CAL_SET;
-  req.channel = getCurrentChannel(sensor);
-  req.offset = offset;
-  req.gain = gain;
-  sendBytes((uint8_t*)&req, sizeof(struct CalSetRequestPacket));
+    double slope = (actual - lastActualCurrent[sensor]) / (wanted - lastWantedCurrent[sensor]);
+    double offset = actual - slope * wanted;
+    double gain = 1 / slope;
+
+    lastWantedCurrent[sensor] = wanted;
+    lastActualCurrent[sensor] = actual;
+  
+    if(pointNumCurrent[sensor] > 0) {
+      printf("Calibrating ADC sensor %d (offset %f gain %f) point %d\n", sensor+1, offset, gain, pointNumCurrent[sensor]);
+
+      struct CalSetRequestPacket req;
+      req.request.cmd = USB_CMD_CAL_SET;
+      req.channel = getCurrentChannel(sensor);
+      req.offset = offset;
+      req.gain = gain;
+      req.point = pointNumCurrent[sensor]-1;
+      req.actual = (int16_t)actual;
+      sendBytes((uint8_t*)&req, sizeof(struct CalSetRequestPacket));
+
+      if(!lynsyn_postinit()) return false;
+    }
+
+    pointNumCurrent[sensor]++;
+
+  } else {
+    struct CalibrateRequestPacket req;
+    req.request.cmd = USB_CMD_CAL;
+    req.channel = getCurrentChannel(sensor);
+    req.calVal = (current / maxCurrent) * 0x10000;
+    sendBytes((uint8_t*)&req, sizeof(struct CalibrateRequestPacket));
+  }
+
   return true;
 }
 
-bool lynsyn_calSetVoltage(uint8_t sensor, double offset, double gain) {
-  struct CalSetRequestPacket req;
-  req.request.cmd = USB_CMD_CAL_SET;
-  req.channel = getVoltageChannel(sensor);
-  req.offset = offset;
-  req.gain = gain;
-  sendBytes((uint8_t*)&req, sizeof(struct CalSetRequestPacket));
-  return true;
-}
+bool lynsyn_adcCalibrateVoltage(uint8_t sensor, double voltage, double maxVoltage) {
+  if(swVer >= SW_VERSION_2_1) {
+    double wanted = (voltage / maxVoltage) * LYNSYN_MAX_SENSOR_VALUE;
+    double actual = 0;
 
-bool lynsyn_calGet(struct CalInfoPacket *calInfo) {
-  struct RequestPacket initRequest;
-  initRequest.cmd = USB_CMD_INIT;
-  sendBytes((uint8_t*)&initRequest, sizeof(struct RequestPacket));
+    {
+      unsigned n = 0;
+      lynsyn_startPeriodSampling(1, 0);
+      while(lynsyn_getNext()) {
+        struct SampleReplyPacket *source = (struct SampleReplyPacket*)buf;
+        actual += source->channel[getVoltageChannel(sensor)];
+        n++;
+      }
+      actual /= n;
+    }
 
-  struct InitReplyPacket initReply;
-  getBytes((uint8_t*)&initReply, sizeof(struct InitReplyPacket), 0);
-  getBytes((uint8_t*)calInfo, sizeof(struct CalInfoPacket), 0);
+    double slope = (actual - lastActualVoltage[sensor]) / (wanted - lastWantedVoltage[sensor]);
+    double offset = actual - slope * wanted;
+    double gain = 1 / slope;
+
+    lastWantedVoltage[sensor] = wanted;
+    lastActualVoltage[sensor] = actual;
+  
+    if(pointNumVoltage[sensor] > 0) {
+      printf("Calibrating ADC sensor %d (offset %f gain %f) point %d\n", sensor+1, offset, gain, pointNumVoltage[sensor]);
+
+      struct CalSetRequestPacket req;
+      req.request.cmd = USB_CMD_CAL_SET;
+      req.channel = getVoltageChannel(sensor);
+      req.offset = offset;
+      req.gain = gain;
+      req.point = pointNumVoltage[sensor]-1;
+      req.actual = (int16_t)actual;
+      sendBytes((uint8_t*)&req, sizeof(struct CalSetRequestPacket));
+
+      if(!lynsyn_postinit()) return false;
+    }
+
+    pointNumVoltage[sensor]++;
+
+  } else {
+    struct CalibrateRequestPacket req;
+    req.request.cmd = USB_CMD_CAL;
+    req.channel = getVoltageChannel(sensor);
+    req.calVal = (voltage / maxVoltage) * 0x10000;
+    sendBytes((uint8_t*)&req, sizeof(struct CalibrateRequestPacket));
+  }
 
   return true;
 }
@@ -390,13 +468,13 @@ bool lynsyn_testAdcCurrent(unsigned sensor, double val, double acceptance) {
     return false;
   }
 
-  printf("Current points: %d\n", calInfo.currentPoints[sensor]);
-  for(int i = 0; i < calInfo.currentPoints[sensor]; i++) {
-    printf("Offset %f Gain %f Point %d\n", calInfo.offsetCurrent[0][i], calInfo.gainCurrent[0][i], calInfo.pointCurrent[0][i]);
-  }
+  /* printf("Current points: %d\n", calInfo.currentPoints[sensor]); */
+  /* for(int i = 0; i < calInfo.currentPoints[sensor]; i++) { */
+  /*   printf("Offset %f Gain %f Point %d\n", calInfo.offsetCurrent[0][i], calInfo.gainCurrent[0][i], calInfo.pointCurrent[0][i]); */
+  /* } */
 
   struct LynsynSample sample;
-  if(!lynsyn_getSample(&sample, false, false)) {
+  if(!lynsyn_getAvgSample(&sample, 1, 0)) {
     return false;
   }
 
@@ -412,13 +490,13 @@ bool lynsyn_testAdcVoltage(unsigned sensor, double val, double acceptance) {
     return false;
   }
 
-  printf("Voltage points: %d\n", calInfo.voltagePoints[sensor]);
-  for(int i = 0; i < calInfo.voltagePoints[sensor]; i++) {
-    printf("Offset %f Gain %f Point %d\n", calInfo.offsetVoltage[0][i], calInfo.gainVoltage[0][i], calInfo.pointVoltage[0][i]);
-  }
+  /* printf("Voltage points: %d\n", calInfo.voltagePoints[sensor]); */
+  /* for(int i = 0; i < calInfo.voltagePoints[sensor]; i++) { */
+  /*   printf("Offset %f Gain %f Point %d\n", calInfo.offsetVoltage[0][i], calInfo.gainVoltage[0][i], calInfo.pointVoltage[0][i]); */
+  /* } */
 
   struct LynsynSample sample;
-  if(!lynsyn_getSample(&sample, false, false)) {
+  if(!lynsyn_getAvgSample(&sample, 1, 0)) {
     return false;
   }
 
@@ -440,7 +518,10 @@ uint32_t lynsyn_crc32(uint32_t crc, uint32_t *data, int length) {
 bool lynsyn_firmwareUpgrade(int size, uint8_t *buf) {
   assert(!inited);
 
-  if(!lynsyn_preinit()) return false;
+  if(!lynsyn_preinit()) {
+    fflush(stdout);
+    return false;
+  }
 
   { // post init
     struct RequestPacket initRequest;
@@ -452,13 +533,17 @@ bool lynsyn_firmwareUpgrade(int size, uint8_t *buf) {
 
     if(initReply.swVersion < SW_VERSION_1_4) {
       printf("Unsupported Lynsyn SW Version: %x\n", initReply.swVersion);
+      fflush(stdout);
       return false;
     }
   }
 
   assert(!(size & 0x3));
 
-  if(size > 0x70000) return false;
+  if(size > 0x70000) {
+    fflush(stdout);
+    return false;
+  }
 
   uint32_t crc = 0;
 
@@ -494,6 +579,7 @@ bool lynsyn_firmwareUpgrade(int size, uint8_t *buf) {
   bool success = lynsyn_init();
   if(success) lynsyn_release();
 
+  fflush(stdout);
   return success;
 }
 
@@ -645,20 +731,26 @@ void lynsyn_startBpSampling(uint64_t startAddr, uint64_t endAddr, uint64_t cores
   buf = sampleBuf;
 }
 
-bool lynsyn_getNextSample(struct LynsynSample *sample) {
+static bool lynsyn_getNext(void) {
   if(samplesLeft == 0) {
     bool transferOk = getArray((uint8_t*)sampleBuf, MAX_SAMPLES, sizeof(struct SampleReplyPacket), &samplesLeft, 0);
     if(!transferOk) return false;
     buf = sampleBuf;
+
+  } else {
+    buf++;
   }
 
-  convertSample(sample, buf);
-
-  if(sample->time == -1) return false;
-
+  struct SampleReplyPacket *reply = (struct SampleReplyPacket*)buf;
+  if(reply->time == -1) return false;
   samplesLeft--;
-  buf++;
 
+  return true;
+}
+
+bool lynsyn_getNextSample(struct LynsynSample *sample) {
+  if(!lynsyn_getNext()) return false;
+  convertSample(sample, buf);
   return true;
 }
 
@@ -675,6 +767,61 @@ bool lynsyn_getSample(struct LynsynSample *sample, bool average, uint64_t cores)
   convertSample(sample, &reply);
 
   return true;
+}
+
+bool lynsyn_getAvgSample(struct LynsynSample *sample, double duration, uint64_t cores) {
+#if 0
+  struct LynsynSample avgSample;
+  unsigned n = 0;
+
+  for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+    avgSample.current[i] = 0;
+    avgSample.voltage[i] = 0;
+  }
+
+  for(int i = 0; i < 1000; i++) {
+    lynsyn_getSample(sample, false, cores);
+
+    for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+      avgSample.current[i] += sample->current[i];
+      avgSample.voltage[i] += sample->voltage[i];
+    }
+    n++;
+  }
+
+  for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+    sample->current[i] = avgSample.current[i] / n;
+    sample->voltage[i] = avgSample.voltage[i] / n;
+  }
+
+  return true;
+
+#else
+  struct LynsynSample avgSample;
+  unsigned n = 0;
+
+  for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+    avgSample.current[i] = 0;
+    avgSample.voltage[i] = 0;
+  }
+
+  lynsyn_startPeriodSampling(duration, cores);
+
+  while(lynsyn_getNextSample(sample)) {
+    for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+      avgSample.current[i] += sample->current[i];
+      avgSample.voltage[i] += sample->voltage[i];
+    }
+    n++;
+  }
+
+  for(int i = 0; i < LYNSYN_MAX_SENSORS; i++) {
+    sample->current[i] = avgSample.current[i] / n;
+    sample->voltage[i] = avgSample.voltage[i] / n;
+  }
+
+  return true;
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////

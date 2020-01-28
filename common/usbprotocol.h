@@ -169,7 +169,8 @@ struct CalSetRequestPacket {
   uint8_t channel;
   double offset;
   double gain;
-  uint32_t flags;
+  uint8_t point;
+  int16_t actual;
 };
 
 struct TestRequestPacket {

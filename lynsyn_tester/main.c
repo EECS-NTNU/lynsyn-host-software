@@ -46,6 +46,8 @@
 #define LONGLONGHEX PRIx64
 #endif
 
+//#define AVERAGE
+
 ///////////////////////////////////////////////////////////////////////////////
 
 double rsDefault3[SENSORS_BOARD_3] = {0.025, 0.05, 0.1};
@@ -216,7 +218,7 @@ void calibrateSensorCurrent(int sensor, double acceptance) {
       fflush(stdout);
       if(!fgets(calCurrent, 80, stdin)) {
         printf("I/O error\n");
-	fflush(stdout);
+        fflush(stdout);
         exit(-1);
       }
 
@@ -274,7 +276,7 @@ void calibrateSensorVoltage(int sensor, double acceptance) {
       fflush(stdout);
       if(!fgets(calVoltage, 80, stdin)) {
         printf("I/O error\n");
-	fflush(stdout);
+        fflush(stdout);
         exit(-1);
       }
 
@@ -388,11 +390,11 @@ void programTest(void) {
   char *mainbin;
 
   if(hwVersion >= HW_VERSION_3_0) {
-    bootbin = "fwbin/lite/lynsyn_boot_2.0.bin";
-    mainbin = "fwbin/lite/lynsyn_main_2.0.bin";
+    bootbin = "fwbin/lite/lynsyn_boot_1.1.bin";
+    mainbin = "fwbin/lite/lynsyn_main_2.1.bin";
   } else {
-    bootbin = "fwbin/original/lynsyn_boot_2.0.bin";
-    mainbin = "fwbin/original/lynsyn_main_2.0.bin";
+    bootbin = "fwbin/original/lynsyn_boot_1.1.bin";
+    mainbin = "fwbin/original/lynsyn_main_2.1.bin";
   }
 
   printf("*** Enter boot bin filename [%s]:\n", bootbin);
@@ -559,7 +561,12 @@ bool live(void) {
   while(true) {
     struct LynsynSample sample;
 
+#ifdef AVERAGE
+    sleep(1);
     lynsyn_getSample(&sample, true, 0);
+#else
+    lynsyn_getAvgSample(&sample, 1, 0);
+#endif
 
     for(int i = 0; i < LYNSYN_MAX_CORES; i++) {
       printf("%" LONGLONGHEX, sample.pc[i]);
@@ -570,8 +577,6 @@ bool live(void) {
     }
     printf("\n");
     fflush(stdout);
-
-    sleep(1);
   }
 
   return true;
