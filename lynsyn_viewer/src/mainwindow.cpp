@@ -90,7 +90,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   // settings
   QSettings settings;
   restoreGeometry(settings.value("geometry").toByteArray());
-  restoreState(settings.value("windowState").toByteArray(), VERSION);
+  restoreState(settings.value("windowState").toByteArray());
 
   Config::core = settings.value("core", 0).toUInt();
   Config::sensor = settings.value("sensor", 0).toUInt();
@@ -118,7 +118,7 @@ MainWindow::~MainWindow() {
 void MainWindow::closeEvent(QCloseEvent *event) {
   QSettings settings;
   settings.setValue("geometry", saveGeometry());
-  settings.setValue("windowState", saveState(VERSION));
+  settings.setValue("windowState", saveState());
   settings.setValue("core", Config::core);
   settings.setValue("sensor", Config::sensor);
   settings.setValue("measurement", Config::measurement);
@@ -131,7 +131,7 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 void MainWindow::about() {
   QMessageBox::about(this, "About Lynsyn Viewer",
-                     QString("Lynsyn Viewer V") + QString::number(VERSION) + "\n"
+                     QString("Lynsyn Viewer V") + QString(VERSION) + "\n"
                      "A performance measurement and analysis utility\n"
                      "Copyright 2020 NTNU\n"
                      "License: GPL Version 3");

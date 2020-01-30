@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   app.setOrganizationName(ORG_NAME);
   app.setOrganizationDomain(ORG_DOMAIN);
   app.setApplicationName(APP_NAME);
-  app.setApplicationVersion(QString("V") + QString::number(VERSION));
+  app.setApplicationVersion(QString("V") + QString(VERSION));
 
   MainWindow *mainWin = new MainWindow();
   mainWin->show();
