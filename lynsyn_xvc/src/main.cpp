@@ -28,104 +28,106 @@ int XvcServer::sread(QTcpSocket *tcpSocket, void *target, int len) {
 int XvcServer::handleData() {
   QTcpSocket *tcpSocket = static_cast<QTcpSocket*>(sender());
 
-  char xvcInfo[32];
-  unsigned int bufferSize = SHIFT_BUFFER_SIZE * 2;
+  while(tcpSocket->bytesAvailable()) {
+    char xvcInfo[32];
+    unsigned int bufferSize = SHIFT_BUFFER_SIZE * 2;
 
-  sprintf(xvcInfo, "xvcServer_v1.0:%u\n", bufferSize);
+    sprintf(xvcInfo, "xvcServer_v1.0:%u\n", bufferSize);
 
-  {
-    char cmd[16];
-    unsigned char buffer[bufferSize], result[bufferSize / 2];
-    memset(cmd, 0, 16);
+    {
+      char cmd[16];
+      unsigned char buffer[bufferSize], result[bufferSize / 2];
+      memset(cmd, 0, 16);
 
-    if (sread(tcpSocket, cmd, 2) != 1) {
-      return 1;
-    }
-
-    if (memcmp(cmd, "ge", 2) == 0) {
-      if (sread(tcpSocket, cmd, 6) != 1) {
+      if (sread(tcpSocket, cmd, 2) != 1) {
         return 1;
       }
-      memcpy(result, xvcInfo, strlen(xvcInfo));
-      if (tcpSocket->write((const char*)result, strlen(xvcInfo)) != (int)strlen(xvcInfo)) {
-        return 1;
-      }
+
+      if (memcmp(cmd, "ge", 2) == 0) {
+        if (sread(tcpSocket, cmd, 6) != 1) {
+          return 1;
+        }
+        memcpy(result, xvcInfo, strlen(xvcInfo));
+        if (tcpSocket->write((const char*)result, strlen(xvcInfo)) != (int)strlen(xvcInfo)) {
+          return 1;
+        }
 #ifdef VERBOSE
-      printf("%u : Received command: 'getinfo'\n", (int)time(NULL));
-      printf("\t Replied with %s\n", xvcInfo);
+        printf("%u : Received command: 'getinfo'\n", (int)time(NULL));
+        printf("\t Replied with %s\n", xvcInfo);
+        fflush(stdout);
+#endif
+        return 0;
+      } else if (memcmp(cmd, "se", 2) == 0) {
+        if (sread(tcpSocket, cmd, 9) != 1) {
+          return 1;
+        }
+        memcpy(result, cmd + 5, 4);
+
+        uint32_t period = (result[3] << 24) | (result[2] << 16) | (result[1] << 8) | result[0];
+        uint32_t newPeriod = lynsyn_setTck(period);
+
+        result[3] = (newPeriod >> 24) & 0xff;
+        result[2] = (newPeriod >> 16) & 0xff;
+        result[1] = (newPeriod >>  8) & 0xff;
+        result[0] = newPeriod         & 0xff;
+
+        if (tcpSocket->write((const char*)result, 4) != 4) {
+          return 1;
+        }
+
+#ifdef VERBOSE
+        printf("%u : Received command: 'settck'\n", (int)time(NULL));
+        printf("\t Replied with %d\n\n", newPeriod);
+        fflush(stdout);
+#endif
+        return 0;
+      } else if (memcmp(cmd, "sh", 2) == 0) {
+        if (sread(tcpSocket, cmd, 4) != 1) {
+          return 1;
+        }
+#ifdef VERBOSE
+        printf("%u : Received command: 'shift'\n", (int)time(NULL));
+        fflush(stdout);
+#endif
+      } else {
+        fprintf(stderr, "invalid cmd '%s'\n", cmd);
+        fflush(stderr);
+        return 1;
+      }
+
+      int len;
+      if (sread(tcpSocket, &len, 4) != 1) {
+        fprintf(stderr, "reading length failed\n");
+        fflush(stderr);
+        return 1;
+      }
+
+      int nr_bytes = (len + 7) / 8;
+      if (nr_bytes * 2 > (int)sizeof(buffer)) {
+        fprintf(stderr, "buffer size exceeded\n");
+        fflush(stderr);
+        return 1;
+      }
+
+      if (sread(tcpSocket, buffer, nr_bytes * 2) != 1) {
+        fprintf(stderr, "reading data failed\n");
+        fflush(stderr);
+        return 1;
+      }
+      memset(result, 0, nr_bytes);
+
+#ifdef VERBOSE
+      printf("\tNumber of Bits  : %d\n", len);
+      printf("\tNumber of Bytes : %d \n", nr_bytes);
+      printf("\n");
       fflush(stdout);
 #endif
-      return 0;
-    } else if (memcmp(cmd, "se", 2) == 0) {
-      if (sread(tcpSocket, cmd, 9) != 1) {
+
+      lynsyn_shift(len, &buffer[0], &buffer[nr_bytes], result);
+
+      if (tcpSocket->write((const char*)result, nr_bytes) != nr_bytes) {
         return 1;
       }
-      memcpy(result, cmd + 5, 4);
-
-      uint32_t period = (result[3] << 24) | (result[2] << 16) | (result[1] << 8) | result[0];
-      uint32_t newPeriod = lynsyn_setTck(period);
-
-      result[3] = (newPeriod >> 24) & 0xff;
-      result[2] = (newPeriod >> 16) & 0xff;
-      result[1] = (newPeriod >>  8) & 0xff;
-      result[0] = newPeriod         & 0xff;
-
-      if (tcpSocket->write((const char*)result, 4) != 4) {
-        return 1;
-      }
-
-#ifdef VERBOSE
-      printf("%u : Received command: 'settck'\n", (int)time(NULL));
-      printf("\t Replied with %d\n\n", newPeriod);
-      fflush(stdout);
-#endif
-      return 0;
-    } else if (memcmp(cmd, "sh", 2) == 0) {
-      if (sread(tcpSocket, cmd, 4) != 1) {
-        return 1;
-      }
-#ifdef VERBOSE
-      printf("%u : Received command: 'shift'\n", (int)time(NULL));
-      fflush(stdout);
-#endif
-    } else {
-      fprintf(stderr, "invalid cmd '%s'\n", cmd);
-      fflush(stderr);
-      return 1;
-    }
-
-    int len;
-    if (sread(tcpSocket, &len, 4) != 1) {
-      fprintf(stderr, "reading length failed\n");
-      fflush(stderr);
-      return 1;
-    }
-
-    int nr_bytes = (len + 7) / 8;
-    if (nr_bytes * 2 > (int)sizeof(buffer)) {
-      fprintf(stderr, "buffer size exceeded\n");
-      fflush(stderr);
-      return 1;
-    }
-
-    if (sread(tcpSocket, buffer, nr_bytes * 2) != 1) {
-      fprintf(stderr, "reading data failed\n");
-      fflush(stderr);
-      return 1;
-    }
-    memset(result, 0, nr_bytes);
-
-#ifdef VERBOSE
-    printf("\tNumber of Bits  : %d\n", len);
-    printf("\tNumber of Bytes : %d \n", nr_bytes);
-    printf("\n");
-    fflush(stdout);
-#endif
-
-    lynsyn_shift(len, &buffer[0], &buffer[nr_bytes], result);
-
-    if (tcpSocket->write((const char*)result, nr_bytes) != nr_bytes) {
-      return 1;
     }
   }
 
