@@ -148,13 +148,17 @@ int main(int argc, char *argv[]) {
     if(arguments.useBp || arguments.cores) {
       if(!lynsyn_jtagInit(lynsyn_getDefaultJtagDevices())) {
         printf("Can't init JTAG chain\n");
-	fflush(stdout);
+        fflush(stdout);
         exit(-1);
       }
     }
 
-    if(arguments.useBp) {
-      lynsyn_startBpSampling(arguments.startAddr, arguments.endAddr, arguments.cores);
+    if(arguments.useBp && arguments.startAddr) {
+      if(!arguments.cores || !arguments.endAddr) {
+        lynsyn_startBpPeriodSampling(arguments.startAddr, arguments.duration, arguments.cores);
+      } else {
+        lynsyn_startBpSampling(arguments.startAddr, arguments.endAddr, arguments.cores);
+      }
     } else {
       lynsyn_startPeriodSampling(arguments.duration, arguments.cores);
     }
