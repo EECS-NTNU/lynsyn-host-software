@@ -715,6 +715,20 @@ void lynsyn_startPeriodSampling(double duration, uint64_t cores) {
   buf = sampleBuf;
 }
 
+void lynsyn_startBpPeriodSampling(uint64_t startAddr, double duration, uint64_t cores) {
+  lynsyn_setStartBreakpoint(startAddr);
+
+  struct StartSamplingRequestPacket req;
+  req.request.cmd = USB_CMD_START_SAMPLING;
+  req.samplePeriod = lynsyn_secondsToCycles(duration);
+  req.cores = cores;
+  req.flags = SAMPLING_FLAG_PERIOD | SAMPLING_FLAG_BP;
+  sendBytes((uint8_t*)&req, sizeof(struct StartSamplingRequestPacket));
+
+  samplesLeft = 0;
+  buf = sampleBuf;
+}
+
 void lynsyn_startBpSampling(uint64_t startAddr, uint64_t endAddr, uint64_t cores) {
   lynsyn_setStartBreakpoint(startAddr);
   lynsyn_setStopBreakpoint(endAddr);

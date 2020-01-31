@@ -125,7 +125,7 @@ bool lynsyn_setMarkBreakpoint(uint64_t addr);
 
 /**
  * Start period sampling.  This starts sampling immediately and runs for the given amount of time
- * Use lynsyn_getNextSample() to collect the samples. 
+ * Use lynsyn_getNextSample() to collect the samples.
  * @param duration Duration in seconds
  * @param cores A bitmask of the cores where PC sampling is performed.  0 means PC sampling is disabled
  */
@@ -133,12 +133,21 @@ void lynsyn_startPeriodSampling(double duration, uint64_t cores);
 
 /**
  * Start breakpoint sampling.  Sampling starts when reaching the start breakpoint and stops when reaching the end breakpoint
- * Use lynsyn_getNextSample() to collect the samples. 
+ * Use lynsyn_getNextSample() to collect the samples.
  * @param startAddr Address of start breakpoint
  * @param endAddr Address of end breakpoint
  * @param cores A bitmask of the cores where PC sampling is performed.  0 means PC sampling is disabled
  */
 void lynsyn_startBpSampling(uint64_t startAddr, uint64_t endAddr, uint64_t cores);
+
+/**
+ * Start BP/period sampling.  Sampling starts when reaching the start breakpoint and runs for the given amount of time
+ * Use lynsyn_getNextSample() to collect the samples.
+ * @param startAddr Address of start breakpoint
+ * @param duration Duration in seconds
+ * @param cores A bitmask of the cores where PC sampling is performed.  0 means PC sampling is disabled
+ */
+void lynsyn_startBpPeriodSampling(uint64_t startAddr, double duration, uint64_t cores);
 
 /**
  * Waits for the next sample to be available, and then return with the new sample in *sample

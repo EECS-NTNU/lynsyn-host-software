@@ -425,9 +425,14 @@ bool Profile::runProfiler() {
     markAddr = elfSupport.lookupSymbol(markBp);
   }
 
-  if(useBp) {
+  if(useBp && startAddr) {
     if(markAddr) lynsyn_setMarkBreakpoint(markAddr);
-    lynsyn_startBpSampling(startAddr, endAddr, coreMask);
+
+    if(!coreMask || !endAddr) {
+      lynsyn_startBpPeriodSampling(startAddr, period, coreMask);
+    } else {
+      lynsyn_startBpSampling(startAddr, endAddr, coreMask);
+    }
   } else {
     lynsyn_startPeriodSampling(period, coreMask);
   }
