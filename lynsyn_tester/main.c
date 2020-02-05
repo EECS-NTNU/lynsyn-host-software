@@ -738,16 +738,15 @@ int main(int argc, char *argv[]) {
     char choiceBuf[80];
 
     printf("Which procedure do you want to perform?\n");
-    printf("Enter '1' for manual pre-init tests\n");
-    printf("Enter '2' for programming and initialization\n");
-    printf("Enter '3' for JTAG testing\n");
-    printf("Enter '4' for calibrating single current sensor\n");
-    printf("Enter '5' for calibrating all current sensors\n");
+    printf("Enter '1' for pre-init tests, programming and initialization\n");
+    printf("Enter '2' for JTAG testing\n");
+    printf("Enter '3' for calibrating single current sensor\n");
+    printf("Enter '4' for calibrating all current sensors\n");
     if(arguments.board >= 3) {
-      printf("Enter '6' for calibrating single voltage sensor\n");
-      printf("Enter '7' for calibrating all voltage sensors\n");
+      printf("Enter '5' for calibrating single voltage sensor\n");
+      printf("Enter '6' for calibrating all voltage sensors\n");
     }
-    printf("Enter '8' for live measurements\n");
+    printf("Enter '7' for live measurements\n");
 
     fflush(stdout);
 
@@ -763,47 +762,42 @@ int main(int argc, char *argv[]) {
 
   switch(arguments.procedure) {
     case 1:
-      printf("This procedure performs some manual pre-init tests of the board\n\n");
+      printf("This procedure tests, programs and initializes the Lynsyn board.\n\n");
       fflush(stdout);
 
       preTest();
-      break;
-
-    case 2:
-      printf("This procedure programs and initializes the Lynsyn board.\n\n");
-      fflush(stdout);
-
+      printf("\n");
       program();
       break;
 
-    case 3:
+    case 2:
       printf("This procedure tests the Lynsyn board.\n\n");
       fflush(stdout);
 
       testJtag();
       break;
 
-    case 4:
+    case 3:
       calCurrentSensor(arguments.acceptance);
       break;
 
-    case 5:
+    case 4:
       calibrateCurrents(arguments.acceptance);
       break;
 
-    case 6:
+    case 5:
       if(arguments.board >= 3) {
         calVoltageSensor(arguments.acceptance);
       }
       break;
 
-    case 7:
+    case 6:
       if(arguments.board >= 3) {
         calibrateVoltages(arguments.acceptance);
       }
       break;
 
-    case 8:
+    case 7:
       live();
       break;
 
