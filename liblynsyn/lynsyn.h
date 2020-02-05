@@ -231,8 +231,12 @@ char *lynsyn_getVersionString(uint8_t version);
 /*****************************************************************************/
 /* Internal, do not use */
 
-bool lynsyn_preinit(void);
+bool lynsyn_preinit(unsigned maxTries);
 void lynsyn_prerelease(void);
+
+extern struct CalInfoPacket calInfo;
+extern unsigned pointNumCurrent[LYNSYN_MAX_SENSORS];
+extern unsigned pointNumVoltage[LYNSYN_MAX_SENSORS];
 
 #ifdef __cplusplus
 }

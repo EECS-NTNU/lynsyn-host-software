@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include <libusb.h>
 
@@ -90,17 +91,17 @@ struct LynsynJtagDevice *devices;
 static bool useMarkBp;
 static bool inited = false;
 
-static unsigned pointNumCurrent[LYNSYN_MAX_SENSORS];
+unsigned pointNumCurrent[LYNSYN_MAX_SENSORS];
 static double lastWantedCurrent[LYNSYN_MAX_SENSORS];
 static double lastActualCurrent[LYNSYN_MAX_SENSORS];
 
-static unsigned pointNumVoltage[LYNSYN_MAX_SENSORS];
+unsigned pointNumVoltage[LYNSYN_MAX_SENSORS];
 static double lastWantedVoltage[LYNSYN_MAX_SENSORS];
 static double lastActualVoltage[LYNSYN_MAX_SENSORS];
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool lynsyn_preinit(void) {
+bool lynsyn_preinit(unsigned maxTries) {
   libusb_device *lynsynBoard;
 
   int r = libusb_init(&usbContext);
@@ -112,8 +113,8 @@ bool lynsyn_preinit(void) {
 
   bool found = false;
   int numDevices = libusb_get_device_list(usbContext, &devs);
-  int tries = 0;
-  while(!found && (tries++ < MAX_TRIES)) {
+  unsigned tries = 0;
+  while(!found && (tries++ < maxTries)) {
     for(int i = 0; i < numDevices; i++) {
       struct libusb_device_descriptor desc;
       libusb_device *dev = devs[i];
@@ -201,7 +202,7 @@ bool lynsyn_postinit(void) {
 }
 
 bool lynsyn_init(void) {
-  if(!lynsyn_preinit()) {
+  if(!lynsyn_preinit(MAX_TRIES)) {
     fflush(stdout);
     return false;
   }
@@ -385,6 +386,12 @@ bool lynsyn_adcCalibrateCurrent(uint8_t sensor, double current, double maxCurren
     lastActualCurrent[sensor] = actual;
   
     if(pointNumCurrent[sensor] > 0) {
+      if(isinf(offset) || isnan(offset) || isinf(gain) || isnan(gain) ||
+         (gain < 0.5) || (gain > 1.5)) {
+        printf("Calibration values do not make sense\n");
+        return false;
+      }
+
       printf("Calibrating ADC sensor %d (offset %f gain %f) point %d\n", sensor+1, offset, gain, pointNumCurrent[sensor]);
 
       struct CalSetRequestPacket req;
@@ -436,6 +443,12 @@ bool lynsyn_adcCalibrateVoltage(uint8_t sensor, double voltage, double maxVoltag
     lastActualVoltage[sensor] = actual;
   
     if(pointNumVoltage[sensor] > 0) {
+      if(isinf(offset) || isnan(offset) || isinf(gain) || isnan(gain) ||
+         (gain < 0.5) || (gain > 1.5)) {
+        printf("Calibration values do not make sense\n");
+        return false;
+      }
+
       printf("Calibrating ADC sensor %d (offset %f gain %f) point %d\n", sensor+1, offset, gain, pointNumVoltage[sensor]);
 
       struct CalSetRequestPacket req;
@@ -518,7 +531,7 @@ uint32_t lynsyn_crc32(uint32_t crc, uint32_t *data, int length) {
 bool lynsyn_firmwareUpgrade(int size, uint8_t *buf) {
   assert(!inited);
 
-  if(!lynsyn_preinit()) {
+  if(!lynsyn_preinit(MAX_TRIES)) {
     fflush(stdout);
     return false;
   }

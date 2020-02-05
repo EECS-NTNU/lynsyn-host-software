@@ -175,7 +175,7 @@ bool testUsb(void) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void calibrateSensorCurrent(int sensor, double acceptance) {
+bool calibrateSensorCurrent(int sensor, double acceptance) {
   int sensors = SENSORS_BOARD_3;
   if(hwVersion == HW_VERSION_2_2) {
     sensors = SENSORS_BOARD_2;
@@ -184,7 +184,7 @@ void calibrateSensorCurrent(int sensor, double acceptance) {
   if((sensor < 0) || (sensor >= sensors)) {
     printf("Incorrect sensor number: %d\n", sensor+1);
     fflush(stdout);
-    exit(-1);
+    return false;
   }
 
   uint8_t hwVersion, bootVersion, swVersion;
@@ -192,6 +192,8 @@ void calibrateSensorCurrent(int sensor, double acceptance) {
   lynsyn_getInfo(&hwVersion, &bootVersion, &swVersion, r);
 
   printf("Calibrate current sensor %d\n", sensor + 1);
+  printf("--------------------------\n");
+
   fflush(stdout);
 
   { // current
@@ -219,7 +221,7 @@ void calibrateSensorCurrent(int sensor, double acceptance) {
       if(!fgets(calCurrent, 80, stdin)) {
         printf("I/O error\n");
         fflush(stdout);
-        exit(-1);
+        return false;
       }
 
       calCurrentVal = strtod(calCurrent, NULL);
@@ -227,27 +229,33 @@ void calibrateSensorCurrent(int sensor, double acceptance) {
       printf("Calibrating sensor %d with calibration current %f\n\n", sensor+1, calCurrentVal);
       fflush(stdout);
 
-      lynsyn_adcCalibrateCurrent(sensor, calCurrentVal, maxCurrentVal);
+      if(!lynsyn_adcCalibrateCurrent(sensor, calCurrentVal, maxCurrentVal)) {
+        printf("\nCALIBRATION ERROR, please redo\n\n");
+        fflush(stdout);
+        return false;
+      }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
 
     if(!lynsyn_testAdcCurrent(sensor, calCurrentVal, acceptance)) {
-      printf("Calibration error\n");
+      printf("\nCALIBRATION ERROR, please redo\n\n");
       fflush(stdout);
-      exit(-1);
+      return false;
     }
 
     fflush(stdout);
     printf("\n");
   }
+
+  return true;
 }
 
-void calibrateSensorVoltage(int sensor, double acceptance) {
+bool calibrateSensorVoltage(int sensor, double acceptance) {
   if((sensor < 0) || (sensor >= SENSORS_BOARD_3)) {
     printf("Incorrect sensor number: %d\n", sensor+1);
     fflush(stdout);
-    exit(-1);
+    return false;
   }
 
   uint8_t hwVersion, bootVersion, swVersion;
@@ -260,6 +268,7 @@ void calibrateSensorVoltage(int sensor, double acceptance) {
     double maxVoltageVal = lynsyn_getMaxVoltage();
 
     printf("Calibrate voltage sensor %d\n", sensor + 1);
+    printf("--------------------------\n");
     fflush(stdout);
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -277,7 +286,7 @@ void calibrateSensorVoltage(int sensor, double acceptance) {
       if(!fgets(calVoltage, 80, stdin)) {
         printf("I/O error\n");
         fflush(stdout);
-        exit(-1);
+        return false;
       }
 
       calVoltageVal = strtod(calVoltage, NULL);
@@ -285,33 +294,32 @@ void calibrateSensorVoltage(int sensor, double acceptance) {
       printf("Calibrating sensor %d with calibration voltage %f\n\n", sensor+1, calVoltageVal);
       fflush(stdout);
 
-      lynsyn_adcCalibrateVoltage(sensor, calVoltageVal, maxVoltageVal);
+      if(!lynsyn_adcCalibrateVoltage(sensor, calVoltageVal, maxVoltageVal)) {
+        printf("\nCALIBRATION ERROR, please redo\n\n");
+        fflush(stdout);
+        return false;
+      }
     }
 
     ///////////////////////////////////////////////////////////////////////////////
 
     if(!lynsyn_testAdcVoltage(sensor, calVoltageVal, acceptance)) {
-      printf("Calibration error\n");
+      printf("\nCALIBRATION ERROR, please redo\n\n");
       fflush(stdout);
-      exit(-1);
+      return false;
     }
 
     printf("\n");
     fflush(stdout);
   }
+
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void programTest(void) {
-  printf("First step: Manual tests.\n\n");
-  fflush(stdout);
-
+void preTest(void) {
   if(hwVersion >= HW_VERSION_3_0) {
-    printf("*** Connect Lynsyn to the PC USB port.\n");
-    fflush(stdout);
-    getchar();
-
     printf("*** Measure the voltage across C18.  Should be 3.3V.\n");
     fflush(stdout);
     getchar();
@@ -348,9 +356,11 @@ void programTest(void) {
   fflush(stdout);
   getchar();
 
-  printf("Second step: Flashing.\n\n");
+  printf("Pre-tests done\n");
   fflush(stdout);
+}
 
+void program(void) {
   if(hwVersion >= HW_VERSION_3_0) {
     printf("*** Connect the EFM32 starter kit to Lynsyn J5 (Cortex Debug).\n");
     fflush(stdout);
@@ -425,18 +435,7 @@ void programTest(void) {
     exit(-1);
   }
 
-  printf("\n*** Unplug the EFM32 starter kit from Lynsyn\n");
-  fflush(stdout);
-  getchar();
-
-  printf("*** Reboot Lynsyn by removing and replugging the USB cable.\n");
-  fflush(stdout);
-  getchar();
-
-  printf("\nThird step: Automatic tests.\n\n");
-  fflush(stdout);
-
-  if(!lynsyn_preinit()) {
+  if(!lynsyn_preinit(20)) {
     printf("Can't initialize lynsyn\n");
     fflush(stdout);
     exit(-1);
@@ -453,34 +452,42 @@ void programTest(void) {
 
   if(!cleanNonVolatile()) exit(-1);
 
-  printf("\nFift step: More manual tests.\n\n");
-  fflush(stdout);
-
-  lynsyn_setLed(true);
-
-  printf("*** Verify that LED D2 is lit.\n");
-  fflush(stdout);
-  getchar();
-
-  lynsyn_setLed(false);
-
-  printf("*** Verify that LED D2 is unlit.\n");
-  fflush(stdout);
-  getchar();
-
   lynsyn_prerelease();
   if(!lynsyn_init()) {
     printf("Can't init lynsyn.\n");
     fflush(stdout);
     exit(-1);
   }
+
+  lynsyn_release();
+
+  printf("\nProgrammed and initialized OK.\n");
+  fflush(stdout);
 }
 
-void programTestAndCalibrate(double acceptance) {
-  programTest();
-
-  printf("Sixt step: Current sensor calibration.\n\n");
+void testJtag(void) {
+  printf("\n*** Connect Lynsyn JTAG to a supported ARM development board (must be powered on)\n");
   fflush(stdout);
+  getchar();
+  
+  if(!lynsyn_init()) {
+    printf("Can't init lynsyn.\n");
+    fflush(stdout);
+    exit(-1);
+  }
+
+  bool jtagOk = lynsyn_jtagInit(lynsyn_getDefaultJtagDevices());
+  
+  if(jtagOk) printf("JTAG works\n");
+  else printf("JTAG FAILURE\n");
+}
+
+void calibrateCurrents(double acceptance) {
+  if(!lynsyn_init()) {
+    printf("Can't init lynsyn.\n");
+    fflush(stdout);
+    exit(-1);
+  }
 
   int sensors = SENSORS_BOARD_3;
   if(hwVersion == HW_VERSION_2_2) {
@@ -488,23 +495,37 @@ void programTestAndCalibrate(double acceptance) {
   }
       
   for(int i = 0; i < sensors; i++) {
-    calibrateSensorCurrent(i, acceptance);
+    do {
+      pointNumCurrent[i] = 0;
+    } while(!calibrateSensorCurrent(i, acceptance));
   }
 
-  if(hwVersion >= HW_VERSION_3_0) {
-    printf("Seventh step: Voltage sensor calibration.\n\n");
-    printf("This lynsyn has a maximum voltage of %fV\n\n", lynsyn_getMaxVoltage());
-    fflush(stdout);
-
-    for(int i = 0; i < SENSORS_BOARD_3; i++) {
-      calibrateSensorVoltage(i, acceptance);
-    }
-  }
+  printf("All current sensors calibrated\n");
+  fflush(stdout);
 
   lynsyn_release();
+}
 
-  printf("\nAll tests OK and all calibrations done.\n");
+void calibrateVoltages(double acceptance) {
+  if(!lynsyn_init()) {
+    printf("Can't init lynsyn.\n");
+    fflush(stdout);
+    exit(-1);
+  }
+
+  printf("This lynsyn has a maximum voltage of %fV\n\n", lynsyn_getMaxVoltage());
   fflush(stdout);
+
+  for(int i = 0; i < SENSORS_BOARD_3; i++) {
+    do {
+      pointNumVoltage[i] = 0;
+    } while(!calibrateSensorVoltage(i, acceptance));
+  }
+
+  printf("All voltage sensors calibrated\n");
+  fflush(stdout);
+
+  lynsyn_release();
 }
 
 void calCurrentSensor(double acceptance) {
@@ -590,6 +611,58 @@ bool live(void) {
   return true;
 }
 
+void printBoardInfo(void) {
+  if(!lynsyn_preinit(1)) {
+    printf("Lynsyn either unconnected, or unprogrammed\n\n");
+    fflush(stdout);
+    return;
+  }
+  lynsyn_prerelease();
+
+  if(!lynsyn_init()) {
+    printf("Can't initialize lynsyn\n");
+    fflush(stdout);
+    return;
+  }
+  
+  printf("Lynsyn information:\n");
+
+  uint8_t hwVersion;
+  uint8_t bootVersion;
+  uint8_t swVersion;
+  double r[LYNSYN_MAX_SENSORS];
+
+  lynsyn_getInfo(&hwVersion, &bootVersion, &swVersion, r);
+
+  printf("  HW version:   %s\n", lynsyn_getVersionString(hwVersion));
+  printf("  Boot version: %s\n", lynsyn_getVersionString(bootVersion));
+  printf("  SW version:   %s\n", lynsyn_getVersionString(swVersion));
+
+  printf("\n  Sensors:\n");
+  for(unsigned sensor = 0; sensor < lynsyn_numSensors(); sensor++) {
+    printf("    %d: Rs=%f ohm\n", sensor, r[sensor]);
+
+    if(calInfo.pointCurrent[sensor][0] == 0) {
+      printf("      Current UNCALIBRATED\n");
+    } else {
+      printf("      Current calibrated with %d points\n", calInfo.currentPoints[sensor] + 1);
+    }
+
+    if(calInfo.pointVoltage[sensor][0] == 0) {
+      printf("      Voltage UNCALIBRATED\n");
+    } else {
+      printf("      Voltage calibrated with %d points\n", calInfo.voltagePoints[sensor] + 1);
+    }
+    printf("\n");
+  }
+
+  printf("\n");
+
+  fflush(stdout);
+
+  lynsyn_release();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static char doc[] = "A test and calibration tool for Lynsyn boards";
@@ -653,16 +726,26 @@ int main(int argc, char *argv[]) {
     default: printf("ERROR: Unknown board\n"); fflush(stdout); exit(1);
   }
 
+  printf("\n*** Connect Lynsyn to the PC USB port.\n");
+  fflush(stdout);
+  getchar();
+
+  printBoardInfo();
+
   if(arguments.procedure < 1) { 
     char choiceBuf[80];
 
     printf("Which procedure do you want to perform?\n");
-    printf("Enter '1' for complete programming, test and calibration.\n");
-    printf("Enter '2' for only current sensor calibration\n");
+    printf("Enter '1' for manual pre-init tests\n");
+    printf("Enter '2' for programming and initialization\n");
+    printf("Enter '3' for JTAG testing\n");
+    printf("Enter '4' for calibrating single current sensor\n");
+    printf("Enter '5' for calibrating all current sensors\n");
     if(arguments.board >= 3) {
-      printf("Enter '3' for only voltage sensor calibration\n");
+      printf("Enter '6' for calibrating single voltage sensor\n");
+      printf("Enter '7' for calibrating all voltage sensors\n");
     }
-    printf("Enter '4' for live measurements\n");
+    printf("Enter '8' for live measurements\n");
 
     fflush(stdout);
 
@@ -678,36 +761,47 @@ int main(int argc, char *argv[]) {
 
   switch(arguments.procedure) {
     case 1:
-      printf("This procedure programs, tests and calibrates the Lynsyn board.\n"
-             "All lines starting with '***' requires you to do a certain action, and then press enter to continue.\n\n");
+      printf("This procedure performs some manual pre-init tests of the board\n\n");
       fflush(stdout);
 
-      programTestAndCalibrate(arguments.acceptance);
+      preTest();
       break;
 
     case 2:
-      printf("*** Connect Lynsyn to the PC USB port.\n");
+      printf("This procedure programs and initializes the Lynsyn board.\n\n");
       fflush(stdout);
-      getchar();
 
-      calCurrentSensor(arguments.acceptance);
+      program();
       break;
 
     case 3:
-      if(arguments.board >= 3) {
-        printf("*** Connect Lynsyn to the PC USB port.\n");
-	fflush(stdout);
-        getchar();
+      printf("This procedure tests the Lynsyn board.\n\n");
+      fflush(stdout);
 
+      testJtag();
+      break;
+
+    case 4:
+      calCurrentSensor(arguments.acceptance);
+      break;
+
+    case 5:
+      calibrateCurrents(arguments.acceptance);
+      break;
+
+    case 6:
+      if(arguments.board >= 3) {
         calVoltageSensor(arguments.acceptance);
       }
       break;
 
-    case 4:
-      printf("*** Connect Lynsyn to the PC USB port.\n");
-      fflush(stdout);
-      getchar();
+    case 7:
+      if(arguments.board >= 3) {
+        calibrateVoltages(arguments.acceptance);
+      }
+      break;
 
+    case 8:
       live();
       break;
 
