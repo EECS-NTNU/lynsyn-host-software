@@ -648,10 +648,12 @@ void printBoardInfo(void) {
       printf("      Current calibrated with %d points\n", calInfo.currentPoints[sensor] + 1);
     }
 
-    if(calInfo.pointVoltage[sensor][0] == 0) {
-      printf("      Voltage UNCALIBRATED\n");
-    } else {
-      printf("      Voltage calibrated with %d points\n", calInfo.voltagePoints[sensor] + 1);
+    if(hwVersion >= HW_VERSION_3_0) {
+      if(calInfo.pointVoltage[sensor][0] == 0) {
+        printf("      Voltage UNCALIBRATED\n");
+      } else {
+        printf("      Voltage calibrated with %d points\n", calInfo.voltagePoints[sensor] + 1);
+      }
     }
     printf("\n");
   }
