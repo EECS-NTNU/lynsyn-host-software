@@ -640,7 +640,7 @@ void printBoardInfo(void) {
 
   printf("\n  Sensors:\n");
   for(unsigned sensor = 0; sensor < lynsyn_numSensors(); sensor++) {
-    printf("    %d: Rs=%f ohm\n", sensor, r[sensor]);
+    printf("    %d: Rs=%f ohm\n", sensor + 1, r[sensor]);
 
     if(calInfo.pointCurrent[sensor][0] == 0) {
       printf("      Current UNCALIBRATED\n");
