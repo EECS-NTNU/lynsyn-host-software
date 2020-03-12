@@ -191,7 +191,8 @@ bool lynsyn_postinit(void) {
   useMarkBp = false;
 
   if((initReply.swVersion != SW_VERSION_2_0) &&
-     (initReply.swVersion != SW_VERSION_2_1)){
+     (initReply.swVersion != SW_VERSION_2_1) &&
+     (initReply.swVersion != SW_VERSION_2_2)){
     printf("Unsupported Lynsyn SW Version: %x\n", initReply.swVersion);
     return false;
   }
