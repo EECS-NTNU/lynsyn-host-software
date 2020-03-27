@@ -67,6 +67,7 @@ private slots:
   void changeCore(int core);
   void changeSensor(int sensor);
   void changeMeasurement(int measurement);
+  void showLive();
 
 protected:
   void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;

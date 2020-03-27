@@ -67,7 +67,18 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionProfile"/>
-   <addaction name="separator"/>
+   <addaction name="actionLive"/>
+  </widget>
+  <widget class="QToolBar" name="toolBar_2">
+   <property name="windowTitle">
+    <string>toolBar_2</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
   </widget>
   <action name="actionUpgrade_PMU_Firmware">
    <property name="text">
@@ -101,7 +112,12 @@
   </action>
   <action name="actionLynsyn_HW_information">
    <property name="text">
-    <string>Lynsyn HW information</string>
+    <string>&amp;Lynsyn HW information</string>
+   </property>
+  </action>
+  <action name="actionLive">
+   <property name="text">
+    <string>Live</string>
    </property>
   </action>
  </widget>
@@ -219,6 +235,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionLive</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showLive()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>about()</slot>
@@ -227,5 +259,6 @@
   <slot>importCsv()</slot>
   <slot>exportCsv()</slot>
   <slot>showHwInfo()</slot>
+  <slot>showLive()</slot>
  </slots>
 </ui>

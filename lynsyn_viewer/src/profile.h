@@ -57,6 +57,7 @@ public:
   unsigned sensors();
   void buildProfTable(unsigned core, unsigned sensor, std::vector<ProfLine*> &table);  
   void buildProfTable(QVector<Measurement> *measurements, std::vector<ProfLine*> &table);
+  LynsynSample getSample();
 
 public slots:
   bool runProfiler();

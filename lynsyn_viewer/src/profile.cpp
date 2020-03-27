@@ -748,3 +748,21 @@ void Profile::buildProfTable(unsigned core, unsigned sensor, std::vector<ProfLin
 
   buildProfTable(measurements, table);
 }
+
+LynsynSample Profile::getSample() {
+  LynsynSample sample;
+
+  unsigned coreMask = 0;
+
+  switch(cores()) {
+    case 0: coreMask = 0x0; break;
+    case 1: coreMask = 0x1; break;
+    case 2: coreMask = 0x3; break;
+    case 3: coreMask = 0x7; break;
+    default:
+    case 4: coreMask = 0xf; break;
+  }
+
+  lynsyn_getSample(&sample, true, coreMask);
+  return sample;
+}

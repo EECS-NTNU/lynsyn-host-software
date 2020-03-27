@@ -19,4 +19,5 @@ QMAKE_CXXFLAGS_RELEASE += -DNDEBUG
 FORMS += \
     src/mainwindow.ui \
     src/profiledialog.ui \
-    src/importdialog.ui
+    src/importdialog.ui \
+    src/livedialog.ui

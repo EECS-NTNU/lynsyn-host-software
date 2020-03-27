@@ -29,7 +29,7 @@
 #define APP_NAME   "Lynsyn Viewer"
 #define ORG_NAME   "lynsyn"
 #define ORG_DOMAIN "ntnu.no"
-#define VERSION    "1.2.1"
+#define VERSION    "1.3"
 
 ///////////////////////////////////////////////////////////////////////////////
 // layout defines

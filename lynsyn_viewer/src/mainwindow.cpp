@@ -30,6 +30,7 @@
 #include "importdialog.h"
 #include "ui_importdialog.h"
 #include "lynsyn.h"
+#include "livedialog.h"
 
 void MainWindow::updateComboboxes() {
   sensorBox->clear();
@@ -82,7 +83,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
   ui->tabWidget->addTab(tableView, "Profile Table");
 
   // statusbar
-  statusBar()->showMessage("Ready");
+  statusBar()->showMessage("");
 
   // title
   setWindowTitle(APP_NAME);
@@ -138,7 +139,13 @@ void MainWindow::about() {
 }
 
 void MainWindow::showHwInfo() {
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+  statusBar()->showMessage("Connecting to lynsyn board...");
+
   if(!lynsyn_init()) {
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
     QMessageBox msgBox;
     msgBox.setText("Can't init Lynsyn.  Make sure a Lynsyn board is connected");
     msgBox.exec();
@@ -171,6 +178,9 @@ void MainWindow::showHwInfo() {
   msgBox.setText(messageText);
 
   lynsyn_release();
+
+  QApplication::restoreOverrideCursor();
+  statusBar()->showMessage("");
 
   msgBox.exec();
 }
@@ -269,11 +279,17 @@ void MainWindow::advance(int step, QString message) {
 void MainWindow::profileEvent() {
   bool useJtag;
 
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+  statusBar()->showMessage("Connecting to lynsyn board...");
+
   if(profile->initProfiler(&useJtag)) {
     double r[LYNSYN_MAX_SENSORS];
     uint8_t hwVersion;
     uint8_t bootVersion;
     uint8_t swVersion;
+
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
 
     if(lynsyn_getInfo(&hwVersion, &bootVersion, &swVersion, r)) {
       profDialog = new ProfileDialog(profile->cores(), hwVersion >= HW_VERSION_3_0, profile->sensors(), useJtag);
@@ -305,6 +321,9 @@ void MainWindow::profileEvent() {
       msgBox.exec();
     }
   } else {
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
     QMessageBox msgBox;
     msgBox.setText("Can't find or initialise Lynsyn");
     msgBox.exec();
@@ -382,4 +401,28 @@ void MainWindow::changeMeasurement(int window) {
 
   graphScene->clearScene();
   graphScene->drawProfile(Config::core, Config::sensor, (MeasurementType)Config::measurement, profile, graphScene->minTime, graphScene->maxTime);
+}
+
+void MainWindow::showLive() {
+  bool useJtag;
+
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+  statusBar()->showMessage("Connecting to lynsyn board...");
+
+  if(profile->initProfiler(&useJtag)) {
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
+    LiveDialog liveDialog(profile, useJtag);
+    liveDialog.exec();
+    profile->endProfiler();
+
+  } else {
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
+    QMessageBox msgBox;
+    msgBox.setText("Can't find or initialise Lynsyn");
+    msgBox.exec();
+  }
 }
