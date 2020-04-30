@@ -41,9 +41,14 @@ extern "C" {
 #define SAMPLE_FLAG_MARK       SAMPLE_REPLY_FLAG_MARK    // the sample is a mark
 #define SAMPLE_FLAG_HALTED     SAMPLE_REPLY_FLAG_HALTED  // sampling has stopped
 
+enum { LYNSYN_DEVICELIST_END, LYNSYN_ARMV7, LYNSYN_ARMV8, LYNSYN_JTAG };
+
 struct LynsynJtagDevice {
-  uint32_t idcode; /** idcode of device */
-  uint32_t irlen; /** irlen of device */
+  uint32_t type;
+  uint32_t idcode;
+  uint32_t irlen;
+  uint32_t pidr[5];
+  uint32_t pidrmask[5];
 };
 
 struct LynsynSample {

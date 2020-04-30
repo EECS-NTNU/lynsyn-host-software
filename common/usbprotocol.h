@@ -89,18 +89,27 @@
 #define FLASH_BUFFER_SIZE 64
 #define SHIFT_BUFFER_SIZE 1024
 
-#define SIZE_JTAG_DEVICE_LIST 256
+#define SIZE_JTAG_DEVICE_LIST 64
+#define SIZE_ARM_DEVICE_LIST 64
 
 #define MAX_SAMPLES 32
 #define MAX_CORES 4
 #define MAX_SENSORS 7
 #define MAX_POINTS 4
 #define CHANNELS 7
-#define MAX_PACKET_SIZE (sizeof(struct ShiftRequestPacket))
+#define MAX_PACKET_SIZE (sizeof(struct JtagInitRequestPacket))
 
 struct JtagDevice {
   uint32_t idcode;
   uint32_t irlen;
+};
+
+enum { DEVICELIST_END, ARMV7, ARMV8 };
+
+struct ArmDevice {
+  uint32_t type;
+  uint32_t pidr[5];
+  uint32_t pidrmask[5];
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,9 +137,15 @@ struct ShiftRequestPacket {
   uint8_t tms[SHIFT_BUFFER_SIZE];
 };
 
-struct JtagInitRequestPacket {
+struct JtagInitRequestPacketV21 {
   struct RequestPacket request;
   struct JtagDevice devices[SIZE_JTAG_DEVICE_LIST];
+};
+
+struct JtagInitRequestPacket {
+  struct RequestPacket request;
+  struct JtagDevice jtagDevices[SIZE_JTAG_DEVICE_LIST];
+  struct ArmDevice armDevices[SIZE_ARM_DEVICE_LIST];
 };
 
 struct StartSamplingRequestPacket {

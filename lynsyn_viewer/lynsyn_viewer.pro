@@ -1,5 +1,5 @@
 QT += widgets sql
-QMAKE_CXXFLAGS += -std=gnu++11 -Wno-unused-parameter
+QMAKE_CXXFLAGS += -std=gnu++11 -Wno-unused-parameter -Wno-deprecated-copy
 
 HEADERS = $$files(src/*.h, true)
 SOURCES = $$files(src/*.cpp, true) ../liblynsyn/lynsyn.c

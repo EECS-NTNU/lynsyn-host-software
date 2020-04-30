@@ -190,6 +190,10 @@ bool lynsyn_postinit(void) {
 
   useMarkBp = false;
 
+  if(!initReply.hwVersion) {
+    printf("Unsupported Lynsyn HW version: %x\n", initReply.hwVersion);
+  }
+
   if((initReply.swVersion != SW_VERSION_2_0) &&
      (initReply.swVersion != SW_VERSION_2_1) &&
      (initReply.swVersion != SW_VERSION_2_2)){
@@ -616,36 +620,65 @@ struct LynsynJtagDevice *lynsyn_getJtagDevices(char *filename) {
   int numDevices = 0;
 
   while(fgets(line, 80, fp)) {
+
     if(line[0] != ';') {
       if(!isWhiteSpace(line)) {
         char *delim = " \t\n\r";
 
-        char *idtoken = strtok(line, delim);
-        char *irlentoken = strtok(NULL, delim);
+        char *typetoken = strtok(line, delim);
+
+        if(!strncmp(typetoken, "jtag", 4)) {
+          char *idtoken = strtok(NULL, delim);
+          char *irlentoken = strtok(NULL, delim);
         
-        if(!idtoken || !irlentoken) {
-          return NULL;
+          if(!idtoken || !irlentoken) {
+            fclose(fp);
+            return NULL;
+          }
+
+          struct LynsynJtagDevice device;
+          device.type = LYNSYN_JTAG;
+          device.idcode = strtol(idtoken, NULL, 0);
+          device.irlen = strtol(irlentoken, NULL, 0);
+
+          numDevices++;
+          devices = realloc(devices, numDevices * sizeof(struct LynsynJtagDevice));
+          devices[numDevices-1] = device;
+
+        } else if(!strncmp(typetoken, "armv7", 5) || !strncmp(typetoken, "armv8", 5)) {
+          char *pidrtoken[5];
+          char *pidrmasktoken[5];
+
+          for(int i = 0; i < 5; i++) {
+            pidrtoken[i] = strtok(NULL, delim);
+            pidrmasktoken[i] = strtok(NULL, delim);
+            if(!pidrtoken[i] || !pidrmasktoken[i]) {
+              fclose(fp);
+              return NULL;
+            }
+          }
+
+          struct LynsynJtagDevice device;
+          device.type = !strncmp(typetoken, "armv7", 5) ? LYNSYN_ARMV7 : LYNSYN_ARMV8;
+          for(int i = 0; i < 5; i++) {
+            device.pidr[i] = strtol(pidrtoken[i], NULL, 0);
+            device.pidrmask[i] = strtol(pidrmasktoken[i], NULL, 0);
+          }
+
+          numDevices++;
+          devices = realloc(devices, numDevices * sizeof(struct LynsynJtagDevice));
+          devices[numDevices-1] = device;
         }
-
-        uint32_t idcode = strtol(idtoken, NULL, 0);
-        unsigned irlen = strtol(irlentoken, NULL, 0);
-
-        numDevices++;
-
-        devices = realloc(devices, numDevices * sizeof(struct LynsynJtagDevice));
-        struct LynsynJtagDevice device;
-        device.idcode = idcode;
-        device.irlen = irlen;
-        devices[numDevices-1] = device;
       }
     }
   }
 
   devices = realloc(devices, (numDevices+1) * sizeof(struct LynsynJtagDevice));
   struct LynsynJtagDevice device;
-  device.idcode = 0;
-  device.irlen = 0;
+  device.type = LYNSYN_DEVICELIST_END;
   devices[numDevices] = device;
+
+  fclose(fp);
 
   return devices;
 }
@@ -664,25 +697,63 @@ struct LynsynJtagDevice *lynsyn_getDefaultJtagDevices(void) {
 bool lynsyn_jtagInit(struct LynsynJtagDevice *devices) {
   if(!devices) return false;
 
-  struct JtagInitRequestPacket req;
-  req.request.cmd = USB_CMD_JTAG_INIT;
+  if(swVer <= SW_VERSION_2_1) {
+    struct JtagInitRequestPacketV21 req;
+    req.request.cmd = USB_CMD_JTAG_INIT;
 
-  memset(req.devices, 0, sizeof(req.devices));
+    memset(req.devices, 0, sizeof(req.devices));
 
-  unsigned curDevice = 0;
-  while(devices[curDevice].idcode) {
-    req.devices[curDevice].idcode = devices[curDevice].idcode;
-    req.devices[curDevice].irlen = devices[curDevice].irlen;
-    curDevice++;
+    unsigned curDevice = 0;
+    while(devices[curDevice].type != LYNSYN_DEVICELIST_END) {
+      req.devices[curDevice].idcode = devices[curDevice].idcode;
+      req.devices[curDevice].irlen = devices[curDevice].irlen;
+      curDevice++;
 
-    if(curDevice > SIZE_JTAG_DEVICE_LIST) {
-      printf("Too many JTAG devices, can handle maximum %d devices\n", SIZE_JTAG_DEVICE_LIST);
-      return false;
+      if(curDevice > SIZE_JTAG_DEVICE_LIST) {
+        printf("Too many JTAG devices, can handle maximum %d devices\n", SIZE_JTAG_DEVICE_LIST);
+        return false;
+      }
     }
+
+    sendBytes((uint8_t*)&req, sizeof(struct JtagInitRequestPacketV21));
+
+  } else {
+    struct JtagInitRequestPacket req;
+    req.request.cmd = USB_CMD_JTAG_INIT;
+
+    memset(req.jtagDevices, 0, sizeof(req.jtagDevices));
+    unsigned curDevice = 0;
+    while(devices[curDevice].type != LYNSYN_DEVICELIST_END) {
+      req.jtagDevices[curDevice].idcode = devices[curDevice].idcode;
+      req.jtagDevices[curDevice].irlen = devices[curDevice].irlen;
+      curDevice++;
+
+      if(curDevice > SIZE_JTAG_DEVICE_LIST) {
+        printf("Too many JTAG devices, can handle maximum %d devices\n", SIZE_JTAG_DEVICE_LIST);
+        return false;
+      }
+    }
+
+    memset(req.armDevices, 0, sizeof(req.armDevices));
+    curDevice = 0;
+    while(devices[curDevice].type != DEVICELIST_END) {
+      req.armDevices[curDevice].type = devices[curDevice].type;
+
+      for(int i = 0; i < 5; i++) {
+        req.armDevices[curDevice].pidr[i] = devices[curDevice].pidr[i];
+        req.armDevices[curDevice].pidrmask[i] = devices[curDevice].pidrmask[i];
+      }
+      curDevice++;
+
+      if(curDevice > SIZE_ARM_DEVICE_LIST) {
+        printf("Too many ARM devices, can handle maximum %d devices\n", SIZE_ARM_DEVICE_LIST);
+        return false;
+      }
+    }
+
+    sendBytes((uint8_t*)&req, sizeof(struct JtagInitRequestPacket));
   }
-
-  sendBytes((uint8_t*)&req, sizeof(struct JtagInitRequestPacket));
-
+  
   struct JtagInitReplyPacket reply;
   getBytes((uint8_t*)&reply, sizeof(struct JtagInitReplyPacket), 0);
   numCores = reply.numCores;
