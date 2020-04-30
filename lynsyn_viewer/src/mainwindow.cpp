@@ -252,15 +252,18 @@ void MainWindow::upgrade() {
       return;
     }
     QApplication::setOverrideCursor(Qt::WaitCursor);
+    statusBar()->showMessage("Upgrading firmware...");
     QByteArray array = file.readAll();
     if(array.size()) {
       if(!lynsyn_firmwareUpgrade(array.size(), (uint8_t*)array.data())) {
         QApplication::restoreOverrideCursor();
+        statusBar()->showMessage("");
         QMessageBox msgBox;
         msgBox.setText("Can't upgrade firmware");
         msgBox.exec();
       } else {
         QApplication::restoreOverrideCursor();
+        statusBar()->showMessage("");
         QMessageBox msgBox;
         msgBox.setText("Firmware upgraded");
         msgBox.exec();
@@ -461,7 +464,7 @@ void MainWindow::jtagDiagnostic() {
     statusBar()->showMessage("");
 
     QMessageBox msgBox;
-    msgBox.setText("Can't get log");
+    msgBox.setText("Can't get log.  Upgrade Lynsyn firmware");
     msgBox.exec();
   }
 }

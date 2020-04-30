@@ -1087,15 +1087,19 @@ char *lynsyn_getVersionString(uint8_t version) {
 }
 
 bool lynsyn_getLog(char *buf, unsigned size) {
-  struct RequestPacket req;
-  req.cmd = USB_CMD_LOG;
-  sendBytes((uint8_t*)&req, sizeof(struct RequestPacket));
+  if(swVer >= SW_VERSION_2_2) {
+    struct RequestPacket req;
+    req.cmd = USB_CMD_LOG;
+    sendBytes((uint8_t*)&req, sizeof(struct RequestPacket));
 
-  struct LogReplyPacket reply;
-  getBytes((uint8_t*)&reply, sizeof(struct LogReplyPacket), 0);
+    struct LogReplyPacket reply;
+    getBytes((uint8_t*)&reply, sizeof(struct LogReplyPacket), 0);
 
-  if(reply.size < size) size = reply.size;
-  memcpy(buf, reply.buf, size);
+    if(reply.size < size) size = reply.size;
+    memcpy(buf, reply.buf, size);
 
-  return true;
+    return true;
+  }
+
+  return false;
 }
