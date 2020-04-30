@@ -67,6 +67,8 @@
 #define USB_CMD_SHIFT            12
 #define USB_CMD_TRST             13
 
+#define USB_CMD_LOG              14
+
 ///////////////////////////////////////////////////////////////////////////////
 
 #define BP_TYPE_START 0
@@ -98,6 +100,8 @@
 #define MAX_POINTS 4
 #define CHANNELS 7
 #define MAX_PACKET_SIZE (sizeof(struct JtagInitRequestPacket))
+
+#define MAX_LOG_SIZE 2048
 
 struct JtagDevice {
   uint32_t idcode;
@@ -247,6 +251,11 @@ struct UsbTestReplyPacket {
 struct JtagInitReplyPacket {
   uint8_t success;
   uint8_t numCores;
+};
+
+struct LogReplyPacket {
+  uint32_t size;
+  char buf[MAX_LOG_SIZE];
 };
 
 struct SampleReplyPacket {

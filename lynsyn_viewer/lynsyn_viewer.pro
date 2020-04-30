@@ -17,6 +17,7 @@ INSTALLS += target
 QMAKE_CXXFLAGS_RELEASE += -DNDEBUG
 
 FORMS += \
+    src/logdialog.ui \
     src/mainwindow.ui \
     src/profiledialog.ui \
     src/importdialog.ui \

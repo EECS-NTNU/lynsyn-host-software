@@ -77,6 +77,12 @@ void lynsyn_release(void);
 */
 bool lynsyn_getInfo(uint8_t *hwVersion, uint8_t *bootVersion, uint8_t *swVersion, double *r);
 
+/**
+ * Get log messages
+ * @return success
+ */
+bool lynsyn_getLog(char *buf, unsigned size);
+
 /*****************************************************************************/
 /* Generic JTAG */
 

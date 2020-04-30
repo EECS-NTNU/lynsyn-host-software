@@ -31,6 +31,8 @@
 #include "ui_importdialog.h"
 #include "lynsyn.h"
 #include "livedialog.h"
+#include "logdialog.h"
+#include "ui_logdialog.h"
 
 void MainWindow::updateComboboxes() {
   sensorBox->clear();
@@ -423,6 +425,43 @@ void MainWindow::showLive() {
 
     QMessageBox msgBox;
     msgBox.setText("Can't find or initialise Lynsyn");
+    msgBox.exec();
+  }
+}
+
+void MainWindow::jtagDiagnostic() {
+  QApplication::setOverrideCursor(Qt::WaitCursor);
+  statusBar()->showMessage("Connecting to lynsyn board...");
+
+  if(!lynsyn_init()) {
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
+    QMessageBox msgBox;
+    msgBox.setText("Can't init Lynsyn.  Make sure a Lynsyn board is connected");
+    msgBox.exec();
+    return;
+  }
+
+  lynsyn_jtagInit(lynsyn_getDefaultJtagDevices());
+
+  char buf[2048];
+  if(lynsyn_getLog(buf, 2048)) {
+    lynsyn_release();
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
+    LogDialog logDialog;
+    logDialog.ui->logTextEdit->setPlainText(buf);
+    logDialog.exec();
+
+  } else {
+    lynsyn_release();
+    QApplication::restoreOverrideCursor();
+    statusBar()->showMessage("");
+
+    QMessageBox msgBox;
+    msgBox.setText("Can't get log");
     msgBox.exec();
   }
 }

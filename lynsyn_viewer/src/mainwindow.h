@@ -68,6 +68,7 @@ private slots:
   void changeSensor(int sensor);
   void changeMeasurement(int measurement);
   void showLive();
+  void jtagDiagnostic();
 
 protected:
   void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;

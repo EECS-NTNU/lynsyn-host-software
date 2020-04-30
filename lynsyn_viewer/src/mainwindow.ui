@@ -49,6 +49,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionLynsyn_HW_information"/>
+    <addaction name="actionJTAG_diagnostic"/>
     <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
@@ -118,6 +119,11 @@
   <action name="actionLive">
    <property name="text">
     <string>Live</string>
+   </property>
+  </action>
+  <action name="actionJTAG_diagnostic">
+   <property name="text">
+    <string>JTAG diagnostic</string>
    </property>
   </action>
  </widget>
@@ -251,6 +257,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionJTAG_diagnostic</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>jtagDiagnostic()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>about()</slot>
@@ -260,5 +282,6 @@
   <slot>exportCsv()</slot>
   <slot>showHwInfo()</slot>
   <slot>showLive()</slot>
+  <slot>jtagDiagnostic()</slot>
  </slots>
 </ui>
