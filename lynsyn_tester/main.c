@@ -401,10 +401,10 @@ void program(void) {
 
   if(hwVersion >= HW_VERSION_3_0) {
     bootbin = "fwbin/lite/lynsyn_boot_1.1.bin";
-    mainbin = "fwbin/lite/lynsyn_main_2.1.bin";
+    mainbin = "fwbin/lite/lynsyn_main_2.2.bin";
   } else {
     bootbin = "fwbin/original/lynsyn_boot_1.1.bin";
-    mainbin = "fwbin/original/lynsyn_main_2.1.bin";
+    mainbin = "fwbin/original/lynsyn_main_2.2.bin";
   }
 
   printf("*** Enter boot bin filename [%s]:\n", bootbin);
