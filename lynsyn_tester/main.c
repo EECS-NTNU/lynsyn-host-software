@@ -547,6 +547,7 @@ void calCurrentSensor(double acceptance) {
     }
     if((sensor[0] != 'x') && (sensor[0] != 'X'))  {
       int s = strtol(sensor, NULL, 10)-1;
+      pointNumCurrent[s] = 0;
       calibrateSensorCurrent(s, acceptance);
     }
   }
@@ -573,6 +574,7 @@ void calVoltageSensor(double acceptance) {
     }
     if((sensor[0] != 'x') && (sensor[0] != 'X'))  {
       int s = strtol(sensor, NULL, 10)-1;
+      pointNumVoltage[s] = 0;
       calibrateSensorVoltage(s, acceptance);
     }
   }
