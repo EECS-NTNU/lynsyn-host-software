@@ -61,7 +61,7 @@ bool programFpga(char *filename) {
   fflush(stdout);
 
   char command[256];
-  snprintf(command, 256, "program_flash -f %s -flash_type s25fl128sxxxxxx0-spi-x1_x2_x4 -blank_check -verify -cable type xilinx_tcf", filename);
+  snprintf(command, 256, "vivado -mode batch -source lynsyn_tester/xilinx.tcl -tclargs \"%s\" xc7a15t_0 s25fl128sxxxxxx0-spi-x1_x2_x4", filename);
 
   int ret = system(command);
   if(ret) {
