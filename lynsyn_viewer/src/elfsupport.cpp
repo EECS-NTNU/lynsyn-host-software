@@ -23,6 +23,7 @@
 #include <QFileInfo>
 #include <QDataStream>
 #include <QProcess>
+#include <QRegularExpression>
 
 #include "elfsupport.h"
 
@@ -89,7 +90,7 @@ uint64_t ElfSupport::lookupSymbol(QString symbol) {
     p.start(cmd);
     p.waitForFinished();
     QString buf = QString::fromStdString(p.readAllStandardOutput().toStdString());
-    QStringList lines = buf.split(QRegExp("\n|\r\n|\r"));
+    QStringList lines = buf.split(QRegularExpression("\n|\r\n|\r"));
 
     for(auto line : lines) {
       QStringList tokens = line.split(' ');
@@ -133,7 +134,7 @@ void ElfSupport::addKallsyms(QString symsFile) {
   QFile file(symsFile);
   if(file.open(QIODevice::ReadOnly)) {
     QString buf = QString::fromStdString(file.readAll().toStdString());
-    kallsyms = buf.split(QRegExp("\n|\r\n|\r"));
+    kallsyms = buf.split(QRegularExpression("\n|\r\n|\r"));
   }
 }
 

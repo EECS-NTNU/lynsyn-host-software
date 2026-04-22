@@ -73,15 +73,15 @@ protected:
 
   void wheelEvent(QWheelEvent *event) {
     if(event->modifiers() & Qt::ControlModifier) {
-      if(event->delta() > 0) zoomInEvent();
+      if(event->angleDelta().y() > 0) zoomInEvent();
       else zoomOutEvent();
       event->accept();
     } else if(event->modifiers() & Qt::ShiftModifier) {
-      if(event->delta() > 0) measurementMaxDecEvent();
+      if(event->angleDelta().y() > 0) measurementMaxDecEvent();
       else measurementMaxIncEvent();
       event->accept();
     } else if(event->modifiers() & Qt::AltModifier) {
-      if(event->delta() > 0) measurementMinDecEvent();
+      if(event->angleDelta().y() > 0) measurementMinDecEvent();
       else measurementMinIncEvent();
       event->accept();
     } else {

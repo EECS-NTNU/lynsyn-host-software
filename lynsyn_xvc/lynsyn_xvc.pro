@@ -1,7 +1,7 @@
 CONFIG += console
 
 QT += network
-QMAKE_CXXFLAGS += -std=gnu++11 -Wno-unused-parameter
+QMAKE_CXXFLAGS += -std=gnu++2a -Wno-unused-parameter
 
 HEADERS = $$files(src/*.h, true)
 SOURCES = $$files(src/*.cpp, true) ../liblynsyn/lynsyn.c

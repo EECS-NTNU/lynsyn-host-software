@@ -34,9 +34,7 @@ Profile::~Profile() {
 }
 
 void Profile::connect() {
-  dbConnection = QString("profile");
-
-  QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", dbConnection);
+  QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE", "main");
   db.setDatabaseName(dbFilename);
 
   bool success = db.open();
@@ -93,10 +91,10 @@ void Profile::connect() {
 
 void Profile::disconnect() {
   {
-    QSqlDatabase db = QSqlDatabase::database(dbConnection);
+    QSqlDatabase db = QSqlDatabase::database("main");
     db.close();
   }
-  QSqlDatabase::removeDatabase(dbConnection);
+  QSqlDatabase::removeDatabase("main");
 }
 
 bool Profile::exportCsv(QString csvFilename) {
@@ -104,7 +102,7 @@ bool Profile::exportCsv(QString csvFilename) {
   bool success = csvFile.open(QIODevice::WriteOnly);
   if(!success) return false;
 
-  QSqlDatabase db = QSqlDatabase::database(dbConnection);
+  QSqlDatabase db = QSqlDatabase::database("main");
   QSqlQuery query(db);
   
   success = query.exec(QString() + "SELECT sensors,cores,mintime FROM meta");
@@ -199,7 +197,7 @@ bool Profile::importCsv(QString csvFilename, QStringList elfFilenames, QString k
 
   clean();
 
-  QSqlDatabase db = QSqlDatabase::database(dbConnection);
+  QSqlDatabase db = QSqlDatabase::database("main");
   db.transaction();
 
   QSqlQuery query(db);
@@ -365,20 +363,12 @@ bool Profile::importCsv(QString csvFilename, QStringList elfFilenames, QString k
   return true;
 }
 
-QString getLastExecutedQuery(const QSqlQuery& query) {
- QString str = query.lastQuery();
- QMapIterator<QString, QVariant> it(query.boundValues());
- while (it.hasNext())
- {
-  it.next();
-  str.replace(it.key(),it.value().toString());
- }
- return str;
+void Profile::clean() {
+  QSqlDatabase db = QSqlDatabase::database("main");
+  clean(db);
 }
 
-void Profile::clean() {
-  QSqlDatabase db = QSqlDatabase::database(dbConnection);
-
+void Profile::clean(QSqlDatabase &db) {
   QSqlQuery query = QSqlQuery(db);
   query.exec("DELETE FROM measurements");
   query.exec("DELETE FROM marks");
@@ -386,8 +376,6 @@ void Profile::clean() {
 }
 
 bool Profile::runProfiler() {
-  clean();
-
   emit advance(0, "Waiting");
 
   double period = profDialog->ui->periodSpinBox->value();
@@ -465,6 +453,8 @@ bool Profile::runProfiler() {
   bool success = db.open();
   Q_UNUSED(success);
   assert(success);
+
+  clean(db);
 
   db.transaction();
 
@@ -613,9 +603,9 @@ bool Profile::runProfiler() {
 
     ElfSupport elfSupport;
     for(auto elf : profDialog->ui->elfEdit->text().split(",")) {
-      elfSupport.addElf(elf);
+      if(!elf.simplified().isEmpty()) elfSupport.addElf(elf);
     }
-    elfSupport.addKallsyms(profDialog->ui->kallsymsEdit->text());
+    if(!profDialog->ui->kallsymsEdit->text().simplified().isEmpty()) elfSupport.addKallsyms(profDialog->ui->kallsymsEdit->text());
 
     QSqlQuery query(db);
     query.setForwardOnly(true);
@@ -669,6 +659,7 @@ bool Profile::runProfiler() {
   }
 
   emit finished(0, "");
+
   return true;
 }
 
@@ -717,7 +708,7 @@ void Profile::buildProfTable(QVector<Measurement> *measurements, std::vector<Pro
 }
 
 void Profile::buildProfTable(unsigned core, unsigned sensor, std::vector<ProfLine*> &table) {
-  QSqlDatabase db = QSqlDatabase::database(dbConnection);
+  QSqlDatabase db = QSqlDatabase::database("main");
   QSqlQuery query(db);
 
   QVector<Measurement> *measurements = new QVector<Measurement>;

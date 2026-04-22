@@ -37,7 +37,6 @@ private:
   ProfileDialog *profDialog;
 
 public:
-  QString dbConnection;
   unsigned numSensors;
   unsigned numCores;
 
@@ -49,6 +48,7 @@ public:
   bool importCsv(QString csvFilename, QStringList elfFilenames, QString kallsyms);
   bool exportCsv(QString csvFilename);
   void clean();
+  void clean(QSqlDatabase &db);
 
   bool initProfiler(bool *useJtag);
   bool endProfiler();

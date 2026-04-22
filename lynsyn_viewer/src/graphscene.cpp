@@ -70,7 +70,7 @@ void GraphScene::drawProfile(unsigned core, unsigned sensor, MeasurementType mea
   QVector<Measurement> *measurements = new QVector<Measurement>;
 
   if(profile) {
-    QSqlDatabase db = QSqlDatabase::database(profile->dbConnection);
+    QSqlDatabase db = QSqlDatabase::database("main");
     QSqlQuery query(db);
 
     QString sensorString = QString::number(sensor+1);
